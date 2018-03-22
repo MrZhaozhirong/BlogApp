@@ -1,0 +1,15 @@
+Executable : D:\Android_studio\android_sdk\cmake\3.6.3155560\bin\cmake.exe
+arguments : 
+-HF:\as_work\BlogApp\app
+-BF:\as_work\BlogApp\app\.externalNativeBuild\cmake\release\x86_64
+-GAndroid Gradle - Ninja
+-DANDROID_ABI=x86_64
+-DANDROID_NDK=D:\Android_studio\android_sdk\ndk-bundle
+-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=F:\as_work\BlogApp\app\build\intermediates\cmake\release\obj\x86_64
+-DCMAKE_BUILD_TYPE=Release
+-DCMAKE_MAKE_PROGRAM=D:\Android_studio\android_sdk\cmake\3.6.3155560\bin\ninja.exe
+-DCMAKE_TOOLCHAIN_FILE=D:\Android_studio\android_sdk\ndk-bundle\build\cmake\android.toolchain.cmake
+-DANDROID_NATIVE_API_LEVEL=21
+-DCMAKE_CXX_FLAGS=
+jvmArgs : 
+
