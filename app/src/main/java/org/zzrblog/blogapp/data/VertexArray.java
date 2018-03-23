@@ -14,7 +14,6 @@ import java.nio.FloatBuffer;
 
 public class VertexArray {
 
-
     private final FloatBuffer floatBuffer;
 
     public VertexArray(float[] vertexData) {
