@@ -1,12 +1,13 @@
 package org.zzrblog.blogapp.objects;
 
 import android.content.Context;
+import android.opengl.GLES20;
+import android.opengl.Matrix;
 
+import org.zzrblog.blogapp.data.IndexBuffer;
 import org.zzrblog.blogapp.data.VertexBuffer;
-import org.zzrblog.blogapp.utils.Constants;
+import org.zzrblog.blogapp.program.BallShaderProgram;
 
-import java.nio.ByteBuffer;
-import java.nio.ShortBuffer;
 import java.util.ArrayList;
 
 /**
@@ -14,9 +15,21 @@ import java.util.ArrayList;
  */
 
 public class Ball {
+    private static final int POSITION_COORDIANTE_COMPONENT_COUNT = 3; // 每个顶点的坐标数 x y z
+
+    private Context context;
+    IndexBuffer indexBuffer;
+    VertexBuffer vertexBuffer;
+    BallShaderProgram ballShaderProgram;
+    public float[] modelMatrix = new float[16];
+    private int numElements = 0; // 记录要画多少个三角形
 
     public Ball(Context context){
-
+        this.context = context;
+        Matrix.setIdentityM(modelMatrix,0);
+        initVertexData();
+        buildProgram();
+        setAttributeStatus();
     }
 
     private void initVertexData() {
@@ -77,20 +90,41 @@ public class Ball {
             }
         }
 
+        numElements = indexList.size();// 记录有多少个索引点
+
         float[] data_vertex = new float[vertexList.size()];
         for (int i = 0; i < vertexList.size(); i++) {
             data_vertex[i] = vertexList.get(i);
         }
-        VertexBuffer vertexBuffer = new VertexBuffer(data_vertex);
-
+        vertexBuffer = new VertexBuffer(data_vertex);
 
         short[] data_index = new short[indexList.size()];
         for (int i = 0; i < indexList.size(); i++) {
             data_index[i] = indexList.get(i);
         }
-        ShortBuffer indexArray = ByteBuffer.allocateDirect(indexList.size() * Constants.BYTES_PER_SHORT).asShortBuffer();
-        indexArray.put(data_index).position(0);
+        indexBuffer = new IndexBuffer(data_index);
     }
 
+    private void buildProgram() {
+        ballShaderProgram = new BallShaderProgram(context);
+        ballShaderProgram.userProgram();
+    }
 
+    private void setAttributeStatus() {
+        vertexBuffer.setVertexAttributePointer(
+                ballShaderProgram.aPositionLocation,
+                POSITION_COORDIANTE_COMPONENT_COUNT,
+                0, 0 );
+    }
+
+    public void draw(float[] modelViewProjectionMatrix) {
+        ballShaderProgram.userProgram();
+        setAttributeStatus();
+        // 将最终变换矩阵写入
+        ballShaderProgram.setUniforms(modelViewProjectionMatrix);
+
+        GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, indexBuffer.getIndexBufferId());
+        GLES20.glDrawElements(GLES20.GL_TRIANGLES, numElements, GLES20.GL_UNSIGNED_SHORT, 0);
+        GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, 0);
+    }
 }
