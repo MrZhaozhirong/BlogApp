@@ -46,7 +46,7 @@ public class PanoramaRenderer implements GLSurfaceView.Renderer{
 
         MatrixHelper.perspectiveM(projectionMatrix, 45, (float)width/(float)height, 1f, 100f);
         Matrix.setLookAtM(viewMatrix, 0,
-                4f, 4f, 4f,
+                0f, 0f, 4f,
                 0f, 0f, 0f,
                 0f, 1f, 0f);
         Matrix.multiplyMM(viewProjectionMatrix,0,  projectionMatrix,0, viewMatrix,0);
