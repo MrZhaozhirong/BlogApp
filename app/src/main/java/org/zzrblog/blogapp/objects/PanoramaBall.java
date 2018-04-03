@@ -9,16 +9,19 @@ import org.zzrblog.blogapp.data.IndexBuffer;
 import org.zzrblog.blogapp.data.VertexBuffer;
 import org.zzrblog.blogapp.program.BallShaderProgram;
 import org.zzrblog.blogapp.utils.Constants;
+import org.zzrblog.blogapp.utils.MatrixHelper;
 import org.zzrblog.blogapp.utils.TextureHelper;
 
 import java.util.ArrayList;
+
+import javax.microedition.khronos.egl.EGLConfig;
 
 
 /**
  * Created by zzr on 2018/3/23.
  */
 
-public class Ball {
+public class PanoramaBall {
     private static final int POSITION_COORDIANTE_COMPONENT_COUNT = 3; // 每个顶点的坐标数 x y z
     private static final int TEXTURE_COORDIANTE_COMPONENT_COUNT = 2; // 每个顶点的坐标数 x y z
     private static final int STRIDE = (POSITION_COORDIANTE_COMPONENT_COUNT
@@ -29,17 +32,17 @@ public class Ball {
     IndexBuffer indexBuffer;
     VertexBuffer vertexBuffer;
     BallShaderProgram ballShaderProgram;
-    public volatile float[] modelMatrix = new float[16];
     private int numElements = 0; // 记录要画多少个三角形
     private int textureId;
 
-    public Ball(Context context){
-        this.context = context;
-        Matrix.setIdentityM(modelMatrix,0);
-        initVertexData();
-        initTexture();
-        buildProgram();
-        setAttributeStatus();
+    private float[] mProjectionMatrix = new float[16];// 投影矩阵
+    private float[] mViewMatrix = new float[16]; // 摄像机位置朝向9参数矩阵
+    private float[] mModelMatrix = new float[16];// 模型变换矩阵
+    private float[] mMVPMatrix = new float[16];// 获取具体物体的总变换矩阵
+    private float[] getFinalMatrix() {
+        Matrix.multiplyMM(mMVPMatrix, 0, mViewMatrix, 0, mModelMatrix, 0);
+        Matrix.multiplyMM(mMVPMatrix, 0, mProjectionMatrix, 0, mMVPMatrix, 0);
+        return mMVPMatrix;
     }
 
     private void initVertexData() {
@@ -149,28 +152,133 @@ public class Ball {
         textureId = TextureHelper.loadTexture(context, R.mipmap.test_normal);
     }
 
-    public void draw(float[] modelViewProjectionMatrix) {
+
+    public PanoramaBall(Context context){
+        this.context = context;
+        Matrix.setIdentityM(mProjectionMatrix, 0);
+        Matrix.setIdentityM(mViewMatrix, 0);
+        Matrix.setIdentityM(mModelMatrix, 0);
+        Matrix.setIdentityM(mMVPMatrix, 0);
+    }
+
+    public void onSurfaceCreated(EGLConfig eglConfig) {
+        initVertexData();
+        initTexture();
+        buildProgram();
+        setAttributeStatus();
+    }
+
+    public void onSurfaceChanged(int width, int height) {
+        GLES20.glViewport(0,0,width,height);
+        GLES20.glEnable(GLES20.GL_DEPTH_TEST);
+
+        MatrixHelper.perspectiveM(mProjectionMatrix, 45, (float)width/(float)height, 1f, 100f);
+        Matrix.setLookAtM(mViewMatrix, 0,
+                0f, 0f, 4f,
+                0f, 0f, 0f,
+                0f, 1f, 0f);
+    }
+
+    public void onDrawFrame() {
+        GLES20.glClear( GLES20.GL_DEPTH_BUFFER_BIT | GLES20.GL_COLOR_BUFFER_BIT);
+
         ballShaderProgram.userProgram();
         setAttributeStatus();
-        // 将最终变换矩阵写入
-        ballShaderProgram.setUniforms(modelViewProjectionMatrix,textureId);
-
+        updateBallMatrix();
+        ballShaderProgram.setUniforms(getFinalMatrix(), textureId);
         GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, indexBuffer.getIndexBufferId());
         GLES20.glDrawElements(GLES20.GL_TRIANGLES, numElements, GLES20.GL_UNSIGNED_SHORT, 0);
         GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, 0);
     }
 
+    //** 惯性自滚标志
+    private volatile boolean gestureInertia_isStop = true;
+    private float mLastX;
+    private float mLastY;
+    private float rotationX = 0;
+    private float rotationY = 0;
+    private float[] mMatrixRotationX = new float[16];
+    private float[] mMatrixRotationY = new float[16];
 
-
-    public void handleTouchUp(float x, float y) {
-
+    private void updateBallMatrix() {
+        Matrix.setIdentityM(this.mModelMatrix, 0);
+        Matrix.setIdentityM(mMatrixRotationX, 0);
+        Matrix.setIdentityM(mMatrixRotationY, 0);
+        if(rotationY > 360 || rotationY < -360){
+            rotationY = rotationY % 360;
+        }
+        Matrix.rotateM(mMatrixRotationY, 0, this.rotationY, 0, 1, 0);
+        Matrix.rotateM(mMatrixRotationX, 0, this.rotationX, 1, 0, 0);
+        Matrix.multiplyMM(this.mModelMatrix,0, mMatrixRotationX,0, mMatrixRotationY,0 );
     }
+
+    public void handleTouchUp(final float x, final float y,
+                              final float xVelocity, final float yVelocity) {
+        this.mLastX = 0;
+        this.mLastY = 0;
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    handleGestureInertia(x, y, xVelocity, yVelocity);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+
+    private void handleGestureInertia(float upX, float upY, float xVelocity, float yVelocity)
+            throws InterruptedException {
+        this.gestureInertia_isStop = false;
+        float mXVelocity = xVelocity;
+        float mYVelocity = yVelocity;
+        while(!this.gestureInertia_isStop){
+//--------------------------------------------------------------------------------
+            float offsetY = mYVelocity / 2000;
+            this.rotationX = this.rotationX + offsetY;
+
+            float offsetX = mXVelocity / 2000;
+            this.rotationY = this.rotationY + offsetX;
+
+            if(rotationX%360 > 90 ){
+                this.rotationX = 90;
+            }
+            if(rotationX%360 < -90 ){
+                this.rotationX = -90;
+            }
+//--------------------------------------------------------------------------------
+            if(Math.abs(mYVelocity - 0.97f*mYVelocity) < 0.00001f
+                    || Math.abs(mXVelocity - 0.97f*mXVelocity) < 0.00001f){
+                this.gestureInertia_isStop = true;
+            }
+            mYVelocity = 0.975f*mYVelocity;
+            mXVelocity = 0.975f*mXVelocity;
+            Thread.sleep(5);
+        }
+    }
+
 
     public void handleTouchDown(float x, float y) {
-
+        this.mLastX = x;
+        this.mLastY = y;
     }
 
-    public void handleTouchDrag(float x, float y) {
+    public void handleTouchMove(float x, float y) {
+        float offsetX = this.mLastX - x;
+        float offsetY = this.mLastY - y;
+        this.rotationY -= offsetX/10 ; // 屏幕横坐标的步伐，球应该是绕着Y轴旋转
+        this.rotationX -= offsetY/10 ; // 屏幕纵坐标的步伐，球应该是绕着X轴旋转
 
+        if(rotationX%360 > 90 ){
+            this.rotationX = 90;
+        }
+        if(rotationX%360 < -90 ){
+            this.rotationX = -90;
+        }
+        this.mLastX = x;
+        this.mLastY = y;
     }
+
 }

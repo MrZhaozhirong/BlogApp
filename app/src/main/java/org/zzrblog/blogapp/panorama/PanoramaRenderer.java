@@ -59,4 +59,22 @@ public class PanoramaRenderer implements GLSurfaceView.Renderer{
         Matrix.multiplyMM(modelViewProjectionMatrix,0, viewProjectionMatrix,0, ball.modelMatrix,0);
         ball.draw(modelViewProjectionMatrix);
     }
+
+    public void handleTouchUp(float x, float y) {
+        if(ball!=null){
+            ball.handleTouchUp( x, y);
+        }
+    }
+
+    public void handleTouchDrag(float x, float y) {
+        if(ball!=null){
+            ball.handleTouchDrag( x, y);
+        }
+    }
+
+    public void handleTouchDown(float x, float y) {
+        if(ball!=null){
+            ball.handleTouchDown( x, y);
+        }
+    }
 }

@@ -7,6 +7,9 @@ import android.content.pm.ConfigurationInfo;
 import android.opengl.GLSurfaceView;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.MotionEvent;
+import android.view.VelocityTracker;
+import android.view.View;
 import android.widget.Toast;
 
 /**
@@ -17,14 +20,15 @@ public class PanoramaActivity extends Activity{
 
 
     private GLSurfaceView glSurfaceView;
-    private PanoramaRenderer renderer;
+    private PanoramaRenderer2 renderer;
     private boolean rendererSet = false;
+    private VelocityTracker mVelocityTracker = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         glSurfaceView = new GLSurfaceView(this);
-        renderer = new PanoramaRenderer(PanoramaActivity.this);
+        renderer = new PanoramaRenderer2(PanoramaActivity.this);
 
         int glVersion = getGLVersion();
         if(glVersion > 0x20000
@@ -44,7 +48,7 @@ public class PanoramaActivity extends Activity{
             return;
         }
         glSurfaceView.setClickable(true);
-        //glSurfaceView.setOnTouchListener();
+        glSurfaceView.setOnTouchListener(new GLViewTouchListener());
         setContentView(glSurfaceView);
     }
 
@@ -56,6 +60,11 @@ public class PanoramaActivity extends Activity{
         if( rendererSet ){
             glSurfaceView.onResume();
         }
+        if (mVelocityTracker == null) {
+            mVelocityTracker = VelocityTracker.obtain();
+        } else {
+            mVelocityTracker.clear();
+        }
     }
 
     @Override
@@ -65,6 +74,11 @@ public class PanoramaActivity extends Activity{
         if( rendererSet ){
             glSurfaceView.onPause();
         }
+        if(null != mVelocityTracker) {
+            mVelocityTracker.clear();
+            mVelocityTracker.recycle();
+            mVelocityTracker = null;
+        }
     }
 
     private int getGLVersion(){
@@ -73,5 +87,82 @@ public class PanoramaActivity extends Activity{
         ConfigurationInfo deviceConfigurationInfo =
                 activityManager.getDeviceConfigurationInfo();
         return deviceConfigurationInfo.reqGlEsVersion;
+    }
+
+
+    private float spacing(MotionEvent event) {
+        float x = event.getX(0) - event.getX(1);
+        float y = event.getY(0) - event.getY(1);
+        return (float) Math.sqrt(x * x + y * y);
+    }
+
+    private class GLViewTouchListener implements View.OnTouchListener {
+        private int mode = 0;
+        private float oldDist;
+
+        @Override
+        public boolean onTouch(View view, MotionEvent event) {
+            // -------------判断多少个触碰点---------------------------------
+            //switch (event.getAction() & MotionEvent.ACTION_MASK ){
+            //    case MotionEvent.ACTION_DOWN:
+            //        mode = 1;
+            //        break;
+            //    case MotionEvent.ACTION_UP:
+            //        mode = 0;
+            //        break;
+            //    case MotionEvent.ACTION_POINTER_UP:
+            //        mode -= 1;
+            //        break;
+            //    case MotionEvent.ACTION_POINTER_DOWN:
+            //        oldDist = spacing(event);
+            //        mode += 1;
+            //        break;
+            //}
+
+            if(event.getAction() == MotionEvent.ACTION_DOWN){
+                final float x = event.getX();
+                final float y = event.getY();
+                glSurfaceView.queueEvent(new Runnable() {
+                    @Override
+                    public void run() {
+                        renderer.handleTouchDown(x, y);
+                    }
+                });
+                // 增加速度
+                if (mVelocityTracker == null) {
+                    mVelocityTracker = VelocityTracker.obtain();
+                } else {
+                    mVelocityTracker.clear();
+                }
+                mVelocityTracker.addMovement(event);
+            }else if(event.getAction() ==MotionEvent.ACTION_MOVE){
+                mVelocityTracker.addMovement(event);
+                mVelocityTracker.computeCurrentVelocity(1000);
+                // 在获取速度之前总要进行以上两步
+                final float x = event.getX();
+                final float y = event.getY();
+                glSurfaceView.queueEvent(new Runnable() {
+                    @Override
+                    public void run() {
+                        renderer.handleTouchDrag(x,y);
+                    }
+                });
+
+            }else if(event.getAction() == MotionEvent.ACTION_UP){
+                final float x = event.getX();
+                final float y = event.getY();
+                final float xVelocity = mVelocityTracker.getXVelocity();
+                final float yVelocity = mVelocityTracker.getYVelocity();
+                glSurfaceView.queueEvent(new Runnable() {
+                    @Override
+                    public void run() {
+                        renderer.handleTouchUp(x, y, xVelocity, yVelocity);
+                    }
+                });
+            }else {
+                return false;
+            }
+            return true;
+        }
     }
 }
