@@ -7,7 +7,7 @@ package org.zzrblog.blogapp.utils;
 public class CameraViewport {
     public static final float CRYSTAL_OVERLOOK = 70f;
     public static final float PERSPECTIVE_OVERLOOK = 70f;
-    public static final float PLANET_OVERLOOK = 140f;
+    public static final float PLANET_OVERLOOK = 150f;
 
     public float overlook;
     public float cx; // 摄像机位置x
