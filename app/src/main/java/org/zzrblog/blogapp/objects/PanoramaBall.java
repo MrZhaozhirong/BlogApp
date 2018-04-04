@@ -220,7 +220,7 @@ public class PanoramaBall {
 
         if(currentControlMode == Constants.RENDER_MODE_PERSPECTIVE){
             targetViewport.overlook = CameraViewport.PLANET_OVERLOOK;
-            targetViewport.setCameraVector(0, 0, 1.0f);
+            //targetViewport.setCameraVector(0, 0, 1.0f);
             //tartgetEye.setTargetViewVector(0f, 0f, 0.0f);
             //tartgetEye.setCameraUpVector(0f, 1.0f, 0.0f);
             targetControlMode = Constants.RENDER_MODE_PLANET;
@@ -228,7 +228,7 @@ public class PanoramaBall {
 
         if(currentControlMode == Constants.RENDER_MODE_PLANET){
             targetViewport.overlook = CameraViewport.CRYSTAL_OVERLOOK;
-            targetViewport.setCameraVector(0, 0, -1.9f);
+            targetViewport.setCameraVector(0, 0, 2.8f);
             //tartgetEye.setTargetViewVector(0f, 0f, 0.0f);
             //tartgetEye.setCameraUpVector(0f, 1.0f, 0.0f);
             targetControlMode = Constants.RENDER_MODE_CRYSTAL;
