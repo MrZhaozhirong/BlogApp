@@ -56,4 +56,10 @@ public class PanoramaRenderer2 implements GLSurfaceView.Renderer{
             ball.handleTouchDown( x, y);
         }
     }
+
+    public void handleDoubleClick() {
+        if(ball!=null){
+            ball.nextControlMode();
+        }
+    }
 }

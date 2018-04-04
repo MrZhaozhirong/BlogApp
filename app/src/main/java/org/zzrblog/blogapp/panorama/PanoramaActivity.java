@@ -7,10 +7,13 @@ import android.content.pm.ConfigurationInfo;
 import android.opengl.GLSurfaceView;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.VelocityTracker;
 import android.view.View;
 import android.widget.Toast;
+
+import org.zzrblog.blogapp.utils.Constants;
 
 /**
  * Created by zzr on 2018/3/23.
@@ -99,7 +102,7 @@ public class PanoramaActivity extends Activity{
     private class GLViewTouchListener implements View.OnTouchListener {
         private int mode = 0;
         private float oldDist;
-
+        private long lastClickTime;
         @Override
         public boolean onTouch(View view, MotionEvent event) {
             // -------------判断多少个触碰点---------------------------------
@@ -135,6 +138,19 @@ public class PanoramaActivity extends Activity{
                     mVelocityTracker.clear();
                 }
                 mVelocityTracker.addMovement(event);
+
+                if (System.currentTimeMillis() - lastClickTime < 500) {
+                    Log.w(Constants.TAG, "SurfaceView-GL double click in thread."+Thread.currentThread().getName());
+                    lastClickTime = 0;
+                    glSurfaceView.queueEvent(new Runnable() {
+                        @Override
+                        public void run() {
+                            renderer.handleDoubleClick();
+                        }
+                    });
+                } else {
+                    lastClickTime = System.currentTimeMillis();
+                }
             }else if(event.getAction() ==MotionEvent.ACTION_MOVE){
                 mVelocityTracker.addMovement(event);
                 mVelocityTracker.computeCurrentVelocity(1000);

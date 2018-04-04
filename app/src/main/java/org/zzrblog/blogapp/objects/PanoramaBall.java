@@ -8,6 +8,7 @@ import org.zzrblog.blogapp.R;
 import org.zzrblog.blogapp.data.IndexBuffer;
 import org.zzrblog.blogapp.data.VertexBuffer;
 import org.zzrblog.blogapp.program.BallShaderProgram;
+import org.zzrblog.blogapp.utils.CameraViewport;
 import org.zzrblog.blogapp.utils.Constants;
 import org.zzrblog.blogapp.utils.MatrixHelper;
 import org.zzrblog.blogapp.utils.TextureHelper;
@@ -172,11 +173,23 @@ public class PanoramaBall {
         GLES20.glViewport(0,0,width,height);
         GLES20.glEnable(GLES20.GL_DEPTH_TEST);
 
-        MatrixHelper.perspectiveM(mProjectionMatrix, 45, (float)width/(float)height, 1f, 100f);
-        Matrix.setLookAtM(mViewMatrix, 0,
-                0f, 0f, 4f,
-                0f, 0f, 0f,
-                0f, 1f, 0f);
+        if(currentViewport==null)
+            currentViewport = new CameraViewport();
+        if(targetViewport==null)
+            targetViewport = new CameraViewport();
+
+        currentViewport.overlook = CameraViewport.CRYSTAL_OVERLOOK;
+        currentViewport.setCameraVector(0, 0, 2.8f);
+        currentViewport.setTargetViewVector(0f, 0f, 0.0f);
+        currentViewport.setCameraUpVector(0f, 1.0f, 0.0f);
+        currentViewport.copyTo(targetViewport);
+
+        MatrixHelper.perspectiveM(mProjectionMatrix, currentViewport.overlook,
+                (float)width/(float)height, 0.01f, 1000f);
+        Matrix.setLookAtM(this.mViewMatrix,0,
+                currentViewport.cx,  currentViewport.cy,  currentViewport.cz,
+                currentViewport.tx,  currentViewport.ty,  currentViewport.tz,
+                currentViewport.upx, currentViewport.upy, currentViewport.upz);
     }
 
     public void onDrawFrame() {
@@ -190,6 +203,50 @@ public class PanoramaBall {
         GLES20.glDrawElements(GLES20.GL_TRIANGLES, numElements, GLES20.GL_UNSIGNED_SHORT, 0);
         GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, 0);
     }
+
+    private CameraViewport currentViewport;
+    private CameraViewport targetViewport;
+    private int currentControlMode = Constants.RENDER_MODE_CRYSTAL;
+    private int targetControlMode  = currentControlMode;
+    //** 视野变换
+    public int nextControlMode() {
+        if(currentControlMode == Constants.RENDER_MODE_CRYSTAL){
+            targetViewport.overlook = CameraViewport.PERSPECTIVE_OVERLOOK;
+            targetViewport.setCameraVector(0, 0, 1.0f);
+            //targetViewport.setTargetViewVector(0f, 0f, 0.0f);
+            //targetViewport.setCameraUpVector(0f, 1.0f, 0.0f);
+            targetControlMode = Constants.RENDER_MODE_PERSPECTIVE;
+        }
+
+        if(currentControlMode == Constants.RENDER_MODE_PERSPECTIVE){
+            targetViewport.overlook = CameraViewport.PLANET_OVERLOOK;
+            targetViewport.setCameraVector(0, 0, 1.0f);
+            //tartgetEye.setTargetViewVector(0f, 0f, 0.0f);
+            //tartgetEye.setCameraUpVector(0f, 1.0f, 0.0f);
+            targetControlMode = Constants.RENDER_MODE_PLANET;
+        }
+
+        if(currentControlMode == Constants.RENDER_MODE_PLANET){
+            targetViewport.overlook = CameraViewport.CRYSTAL_OVERLOOK;
+            targetViewport.setCameraVector(0, 0, -1.9f);
+            //tartgetEye.setTargetViewVector(0f, 0f, 0.0f);
+            //tartgetEye.setCameraUpVector(0f, 1.0f, 0.0f);
+            targetControlMode = Constants.RENDER_MODE_CRYSTAL;
+        }
+        return targetControlMode;
+    }
+
+
+
+
+
+
+
+
+
+
+
+
 
     //** 惯性自滚标志
     private volatile boolean gestureInertia_isStop = true;
