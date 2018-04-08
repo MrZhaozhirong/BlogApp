@@ -60,7 +60,7 @@ public class CameraViewport {
         }
     }
 
-    private static boolean beEqualTo(float a, float b){
+    public static boolean beEqualTo(float a, float b){
         if(Math.abs(a-b) < 0.001f || Math.abs(a-b)==0f){
             return true;
         }

@@ -36,6 +36,9 @@ public class PanoramaBall {
     private int numElements = 0; // 记录要画多少个三角形
     private int textureId;
 
+    private int mSurfaceWidth;
+    private int mSurfaceHeight;
+
     private float[] mProjectionMatrix = new float[16];// 投影矩阵
     private float[] mViewMatrix = new float[16]; // 摄像机位置朝向9参数矩阵
     private float[] mModelMatrix = new float[16];// 模型变换矩阵
@@ -184,6 +187,8 @@ public class PanoramaBall {
         currentViewport.setCameraUpVector(0f, 1.0f, 0.0f);
         currentViewport.copyTo(targetViewport);
 
+        mSurfaceWidth = width;
+        mSurfaceHeight = height;
         MatrixHelper.perspectiveM(mProjectionMatrix, currentViewport.overlook,
                 (float)width/(float)height, 0.01f, 1000f);
         Matrix.setLookAtM(this.mViewMatrix,0,
@@ -194,7 +199,7 @@ public class PanoramaBall {
 
     public void onDrawFrame() {
         GLES20.glClear( GLES20.GL_DEPTH_BUFFER_BIT | GLES20.GL_COLOR_BUFFER_BIT);
-
+        updateBallControlMode();
         ballShaderProgram.userProgram();
         setAttributeStatus();
         updateBallMatrix();
@@ -203,6 +208,7 @@ public class PanoramaBall {
         GLES20.glDrawElements(GLES20.GL_TRIANGLES, numElements, GLES20.GL_UNSIGNED_SHORT, 0);
         GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, 0);
     }
+
 
     private CameraViewport currentViewport;
     private CameraViewport targetViewport;
@@ -237,10 +243,102 @@ public class PanoramaBall {
     }
 
 
+    private void updateBallControlMode() {
+        if(currentControlMode != targetControlMode){
+            //从 全景球 切换成 透视
+            if(currentControlMode == Constants.RENDER_MODE_CRYSTAL &&
+                    targetControlMode == Constants.RENDER_MODE_PERSPECTIVE){
 
+                if(!CameraViewport.beEqualTo(currentViewport.overlook,targetViewport.overlook)){
+                    currentViewport.overlook += (CameraViewport.PERSPECTIVE_OVERLOOK - CameraViewport.CRYSTAL_OVERLOOK)/20f; // 0.f
+                }else{
+                    currentViewport.overlook = CameraViewport.PERSPECTIVE_OVERLOOK;
+                }
+                if(!currentViewport.equals(targetViewport)){
+                    float diff = calculateDist(currentViewport.cz, targetViewport.cz, 10f);
+                    // 从 2.8 -> 1.0
+                    currentViewport.setCameraVector(currentViewport.cx,currentViewport.cy,currentViewport.cz-=diff);
+                    if(currentViewport.cz < 1.0f)
+                        currentViewport.setCameraVector(0, 0, 1.0f);
+                }else{
+                    currentViewport.setCameraVector(0, 0, 1.0f);
+                }
+                if(CameraViewport.beEqualTo(currentViewport.overlook,targetViewport.overlook)
+                        && currentViewport.equals(targetViewport)){
+                    //切换完成
+                    currentControlMode = Constants.RENDER_MODE_PERSPECTIVE;
+                }
+            }
+            //从 透视 切换成 小行星
+            if(currentControlMode == Constants.RENDER_MODE_PERSPECTIVE &&
+                    targetControlMode == Constants.RENDER_MODE_PLANET){
+                if(!CameraViewport.beEqualTo(currentViewport.overlook,targetViewport.overlook)){
+                    // 70 -> 150f
+                    currentViewport.overlook += (CameraViewport.PLANET_OVERLOOK-CameraViewport.PERSPECTIVE_OVERLOOK)/40f; //2.0f;
+                }else{
+                    currentViewport.overlook = CameraViewport.PLANET_OVERLOOK;
+                }
+                if(!currentViewport.equals(targetViewport)){
+                    float diff = calculateDist(currentViewport.cz, targetViewport.cz, 10f);
+                    currentViewport.setCameraVector(currentViewport.cx,currentViewport.cy,currentViewport.cz-=diff);
+                    if(currentViewport.cz < 1.0f)
+                        currentViewport.setCameraVector(0, 0, 1.0f);
+                }else{
+                    currentViewport.setCameraVector(0, 0, 1.0f);
+                }
+                if(CameraViewport.beEqualTo(currentViewport.overlook,targetViewport.overlook)
+                        && currentViewport.equals(targetViewport)){
+                    //切换完成
+                    currentControlMode = Constants.RENDER_MODE_PLANET;
+                }
+            }
+            //从 小行星 切换成 全景球
+            if(currentControlMode == Constants.RENDER_MODE_PLANET &&
+                    targetControlMode == Constants.RENDER_MODE_CRYSTAL){
+                if(!CameraViewport.beEqualTo(currentViewport.overlook,targetViewport.overlook)){
+                    currentViewport.overlook -= (CameraViewport.PLANET_OVERLOOK-CameraViewport.PERSPECTIVE_OVERLOOK)/40f;//2.0f;
+                }else{
+                    currentViewport.overlook = CameraViewport.CRYSTAL_OVERLOOK;
+                }
+                //currentViewport.overlook = CameraViewport.CRYSTAL_OVERLOOK;
 
+                if(!currentViewport.equals(targetViewport)){
+                    float diff = calculateDist(currentViewport.cz, targetViewport.cz, 10f);
+                    currentViewport.setCameraVector(currentViewport.cx,currentViewport.cy,currentViewport.cz+=diff);
+                }else{
+                    currentViewport.setCameraVector(0, 0, 2.8f);
+                }
+                if(CameraViewport.beEqualTo(currentViewport.overlook,targetViewport.overlook)
+                        && currentViewport.equals(targetViewport)){
+                    currentControlMode = Constants.RENDER_MODE_CRYSTAL;
+                }
+            }
+            //Log.w(Constants.TAG, "currentOverture : "+currentViewport.overlook);
+            //Log.w(Constants.TAG, "current mViewMatrix: " + "\n" +
+            //        currentViewport.cx + " " +  currentViewport.cy + " " +  currentViewport.cz + "\n" +
+            //        currentViewport.tx + " " +  currentViewport.ty + " " +  currentViewport.tz + "\n" +
+            //        currentViewport.upx + " " + currentViewport.upy + " " + currentViewport.upz + "\n");
+            //Log.w(Constants.TAG, "=========================  " + "\n");
+            //矩阵生效
+            float ratio = (float)mSurfaceWidth / (float)mSurfaceHeight;
+            MatrixHelper.perspectiveM(this.mProjectionMatrix,
+                    currentViewport.overlook, ratio, 0.01f, 1000f);
+            Matrix.setLookAtM(this.mViewMatrix,0,
+                    currentViewport.cx,  currentViewport.cy,  currentViewport.cz, //摄像机位置
+                    currentViewport.tx,  currentViewport.ty,  currentViewport.tz, //摄像机目标视点
+                    currentViewport.upx, currentViewport.upy, currentViewport.upz);//摄像机头顶方向向量
+        }
+    }
 
-
+    // 单摆公式。
+    private float calculateDist(float current, float target, float divisor) {
+        if(divisor==0) return 0;
+        float absCurrent = Math.abs(current);
+        float absTarget = Math.abs(target);
+        float diff = Math.abs(absCurrent - absTarget);
+        float dist = (float) (Math.sqrt(Math.pow(diff, 2.0)) / divisor);
+        return Math.abs(dist);
+    }
 
 
 
