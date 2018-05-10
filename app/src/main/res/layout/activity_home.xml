@@ -9,12 +9,31 @@
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
-    tools:context="org.zzrblog.blogapp.MainActivity">
+    tools:context="org.zzrblog.MainActivity">
 
-    <TextView
-        android:id="@+id/sample_text"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Hello World!"
-        android:cursorVisible="false"/>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="曲棍球"
+            android:onClick="clickOnHockey"/>
+        <Space
+            android:layout_width="1dp"
+            android:layout_height="wrap_content"/>
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="正方形"
+            android:onClick="clickOnCube"/>
+        <Space
+            android:layout_width="1dp"
+            android:layout_height="wrap_content"/>
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="全景球"
+            android:onClick="clickOnPanorama"/>
+    </LinearLayout>
 </RelativeLayout>

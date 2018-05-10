@@ -8,7 +8,7 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".panorama.PanoramaActivity">
+        <activity android:name="org.zzrblog.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
 
@@ -16,8 +16,9 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".hockey.HockeyActivity" />
-        <activity android:name=".cube.CubeActivity" />
+        <activity android:name="org.zzrblog.blogapp.hockey.HockeyActivity" />
+        <activity android:name="org.zzrblog.blogapp.cube.CubeActivity" />
+        <activity android:name="org.zzrblog.blogapp.panorama.PanoramaActivity" />
     </application>
 
 </manifest>
