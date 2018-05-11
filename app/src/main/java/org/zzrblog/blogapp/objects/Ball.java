@@ -146,7 +146,7 @@ public class Ball {
     }
 
     private void initTexture() {
-        textureId = TextureHelper.loadTexture(context, R.mipmap.test_normal);
+        textureId = TextureHelper.loadTexture(context, R.mipmap.world);
     }
 
     public void draw(float[] modelViewProjectionMatrix) {

@@ -153,7 +153,7 @@ public class PanoramaBall {
     }
 
     private void initTexture() {
-        textureId = TextureHelper.loadTexture(context, R.mipmap.test_normal);
+        textureId = TextureHelper.loadTexture(context, R.mipmap.world);
     }
 
 
