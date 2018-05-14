@@ -1,3 +1,16 @@
 <resources>
     <string name="app_name">BlogApp</string>
+
+
+    <string-array name="permissions">
+        <item>无法开启此权限功能：PERMISSION_RECORD_AUDIO</item>
+        <item>无法开启此权限功能：PERMISSION_GET_ACCOUNTS</item>
+        <item>无法开启此权限功能：PERMISSION_READ_PHONE_STATE</item>
+        <item>无法开启此权限功能：PERMISSION_CALL_PHONE</item>
+        <item>无法开启此权限功能：PERMISSION_CAMERA</item>
+        <item>无法开启此权限功能：PERMISSION_ACCESS_FINE_LOCATION</item>
+        <item>无法开启此权限功能：PERMISSION_ACCESS_COARSE_LOCATION</item>
+        <item>无法开启此权限功能：PERMISSION_READ_EXTERNAL_STORAGE</item>
+        <item>无法开启此权限功能：PERMISSION_WRITE_EXTERNAL_STORAGE</item>
+    </string-array>
 </resources>
