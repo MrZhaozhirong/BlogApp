@@ -1,34 +1,53 @@
 package org.zzrblog.camera.gles;
 
+import android.graphics.SurfaceTexture;
 import android.opengl.EGL14;
 import android.opengl.EGLConfig;
 import android.opengl.EGLContext;
 import android.opengl.EGLDisplay;
 import android.opengl.EGLExt;
+import android.opengl.EGLSurface;
 import android.util.Log;
-
-import static android.content.ContentValues.TAG;
+import android.view.Surface;
 
 /**
  * Created by zzr on 2018/5/16.
  */
 
 public class EglCore {
+    private static String TAG = GlUtil.TAG;
+    public static final int FLAG_RECORDABLE = 0x01;
+    public static final int FLAG_TRY_GLES3 = 0x02;
+    // EGLExt.EGL_RECORDABLE_ANDROID = 12610; (required 26)要求SDK26，我们自己定义就好了。
+    private static final int EGL_RECORDABLE_ANDROID = 0x3142;
 
     private EGLDisplay mEGLDisplay = EGL14.EGL_NO_DISPLAY;
     private EGLContext mEGLContext = EGL14.EGL_NO_CONTEXT;
     private EGLConfig mEGLConfig = null;
     private int mGlVersion = -1;
 
-    public static final int FLAG_RECORDABLE = 0x01;
-
-    public static final int FLAG_TRY_GLES3 = 0x02;
-    // EGLExt.EGL_RECORDABLE_ANDROID = 12610; (required 26)要求SDK26，我们自己定义就好了。
-    private static final int EGL_RECORDABLE_ANDROID = 0x3142;
-
+    public int getGlVersion() {
+        return mGlVersion;
+    }
 
     public EglCore() {
         this(null, 0);
+    }
+
+
+    /**
+     * 查看当前的 EGLDisplay, EGLContext, EGLSurface.
+     */
+    public static void logCurrent() {
+        EGLDisplay display;
+        EGLContext context;
+        EGLSurface surface;
+
+        display = EGL14.eglGetCurrentDisplay();
+        context = EGL14.eglGetCurrentContext();
+        surface = EGL14.eglGetCurrentSurface(EGL14.EGL_DRAW);
+        Log.i(TAG, "Current EGL state : display=" + display + ", context=" + context +
+                ", surface=" + surface);
     }
 
     /**
@@ -89,9 +108,6 @@ public class EglCore {
         }
     }
 
-
-
-
     /**
      * 从本地设备中寻找合适的 EGLConfig.
      */
@@ -123,5 +139,58 @@ public class EglCore {
             return null;
         }
         return configs[0];
+    }
+
+    /**
+     * 释放EGL资源
+     */
+    public void release() {
+        if (mEGLDisplay != EGL14.EGL_NO_DISPLAY) {
+            // Android 使用一个引用计数EGLDisplay。
+            // 因此，对于每个eglInitialize，我们需要一个eglTerminate。
+            EGL14.eglMakeCurrent(mEGLDisplay, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_SURFACE,
+                    EGL14.EGL_NO_CONTEXT);
+            EGL14.eglDestroyContext(mEGLDisplay, mEGLContext);
+            EGL14.eglReleaseThread();
+            EGL14.eglTerminate(mEGLDisplay);
+        }
+        mEGLDisplay = EGL14.EGL_NO_DISPLAY;
+        mEGLContext = EGL14.EGL_NO_CONTEXT;
+        mEGLConfig = null;
+    }
+
+    @Override
+    protected void finalize() throws Throwable {
+        try {
+            if (mEGLDisplay != EGL14.EGL_NO_DISPLAY) {
+                // (意外终止)终结器finalizer是不在保持EGL状态的线程上运行的，
+                // 我们要在这里完全释放它，或者这里直接抛出的异常。不过在这里抛异常都是没啥卵用了
+                Log.w(TAG, "WARNING: EglCore was not explicitly released -- state may be leaked");
+                release();
+            }
+        } finally {
+            super.finalize();
+        }
+    }
+
+
+
+
+
+    public EGLSurface createWindowSurface(Object surface) {
+        if (!(surface instanceof Surface) && !(surface instanceof SurfaceTexture)) {
+            throw new RuntimeException("invalid surface: " + surface);
+        }
+        // 创建EGLSurface, 绑定传入进来的surface
+        int[] surfaceAttribs = {
+                EGL14.EGL_NONE
+        };
+        EGLSurface eglSurface = EGL14.eglCreateWindowSurface(mEGLDisplay, mEGLConfig, surface,
+                surfaceAttribs, 0);
+        GlUtil.checkGlError("eglCreateWindowSurface");
+        if (eglSurface == null) {
+            throw new RuntimeException("surface was null");
+        }
+        return eglSurface;
     }
 }
