@@ -174,9 +174,11 @@ public class EglCore {
     }
 
 
-
-
-
+    /**
+     * 创建一个 EGL+Surface
+     * @param surface
+     * @return
+     */
     public EGLSurface createWindowSurface(Object surface) {
         if (!(surface instanceof Surface) && !(surface instanceof SurfaceTexture)) {
             throw new RuntimeException("invalid surface: " + surface);
@@ -192,5 +194,96 @@ public class EglCore {
             throw new RuntimeException("surface was null");
         }
         return eglSurface;
+    }
+
+    /**
+     * 用旧版的Pbuffer，创建离屏的EGLSurface
+     */
+    public EGLSurface createOffscreenSurface(int width, int height) {
+        int[] surfaceAttribs = {
+                EGL14.EGL_WIDTH, width,
+                EGL14.EGL_HEIGHT, height,
+                EGL14.EGL_NONE
+        };
+        EGLSurface eglSurface = EGL14.eglCreatePbufferSurface(mEGLDisplay, mEGLConfig,
+                surfaceAttribs, 0);
+        GlUtil.checkGlError("eglCreatePbufferSurface");
+        if (eglSurface == null) {
+            throw new RuntimeException("surface was null");
+        }
+        return eglSurface;
+    }
+
+    /**
+     * 查询当前surface的状态值。
+     */
+    public int querySurface(EGLSurface eglSurface, int what) {
+        int[] value = new int[1];
+        EGL14.eglQuerySurface(mEGLDisplay, eglSurface, what, value, 0);
+        return value[0];
+    }
+
+    /**
+     * Makes our EGL context current, using the supplied surface for both "draw" and "read".
+     */
+    public void makeCurrent(EGLSurface eglSurface) {
+        if (mEGLDisplay == EGL14.EGL_NO_DISPLAY) {
+            Log.d(TAG, "NOTE: makeCurrent w/o display");
+        }
+        if (!EGL14.eglMakeCurrent(mEGLDisplay, eglSurface, eglSurface, mEGLContext)) {
+            throw new RuntimeException("eglMakeCurrent failed");
+        }
+    }
+    /**
+     * Makes our EGL context current, using the supplied "draw" and "read" surfaces.
+     */
+    public void makeCurrent(EGLSurface drawSurface, EGLSurface readSurface) {
+        if (mEGLDisplay == EGL14.EGL_NO_DISPLAY) {
+            Log.d(TAG, "NOTE: makeCurrent w/o display");
+        }
+        if (!EGL14.eglMakeCurrent(mEGLDisplay, drawSurface, readSurface, mEGLContext)) {
+            throw new RuntimeException("eglMakeCurrent(draw,read) failed");
+        }
+    }
+    /**
+     * Makes no context current.
+     */
+    public void makeNothingCurrent() {
+        if (!EGL14.eglMakeCurrent(mEGLDisplay, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_SURFACE,
+                EGL14.EGL_NO_CONTEXT)) {
+            throw new RuntimeException("eglMakeCurrent failed");
+        }
+    }
+
+
+    /**
+     * Calls eglSwapBuffers.  Use this to "publish" the current frame.
+     * @return false on failure
+     */
+    public boolean swapBuffers(EGLSurface eglSurface) {
+        return EGL14.eglSwapBuffers(mEGLDisplay, eglSurface);
+    }
+
+    /**
+     * Sends the presentation time stamp to EGL.  Time is expressed in nanoseconds.
+     */
+    public void setPresentationTime(EGLSurface eglSurface, long nsecs) {
+        EGLExt.eglPresentationTimeANDROID(mEGLDisplay, eglSurface, nsecs);
+    }
+
+    /**
+     * 判断当前的EGLContext 和 EGLSurface是否同一个EGL
+     */
+    public boolean isCurrent(EGLSurface eglSurface) {
+        return mEGLContext.equals(EGL14.eglGetCurrentContext()) &&
+                eglSurface.equals(EGL14.eglGetCurrentSurface(EGL14.EGL_DRAW));
+    }
+
+    /**
+     * Destroys the specified surface.
+     * Note the EGLSurface won't actually be destroyed if it's still current in a context.
+     */
+    public void releaseSurface(EGLSurface eglSurface) {
+        EGL14.eglDestroySurface(mEGLDisplay, eglSurface);
     }
 }

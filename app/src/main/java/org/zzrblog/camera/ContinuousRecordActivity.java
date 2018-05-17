@@ -25,7 +25,7 @@ public class ContinuousRecordActivity extends Activity implements SurfaceHolder.
         super.onCreate(savedInstanceState);
         setContentView(R.layout.continuous_record);
 
-        sv = (SurfaceView) findViewById(R.id.continuousCapture_surfaceView);
+        sv = (SurfaceView) findViewById(R.id.continuousRecord_surfaceView);
         SurfaceHolder sh = sv.getHolder();
         sh.addCallback(this);
     }
