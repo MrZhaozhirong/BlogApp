@@ -37,7 +37,7 @@ public class ContinuousRecordActivity extends Activity implements SurfaceHolder.
     public void surfaceCreated(SurfaceHolder surfaceHolder) {
         Log.d(TAG, "surfaceCreated holder=" + surfaceHolder);
         //首先我们描述一下在这里即将发生的：
-        // 我们等到一个surface创建回调给开发者我们，因为不能让一个EGL上下文没有一个渲染表面吧？！，
+        // surface创建回调给开发者我们，然后我们创建一个EGL上下文，组成一个我们需要的EGLSurface
         mEglCore = new EglCore(null, EglCore.FLAG_RECORDABLE);
     }
 
