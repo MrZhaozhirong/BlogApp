@@ -79,6 +79,7 @@ public class EglSurfaceBase {
      * 释放 EGL surface.
      */
     public void releaseEglSurface() {
+        mEglCore.makeNothingCurrent();
         mEglCore.releaseSurface(mEGLSurface);
         mEGLSurface = EGL14.EGL_NO_SURFACE;
         mWidth = mHeight = -1;
