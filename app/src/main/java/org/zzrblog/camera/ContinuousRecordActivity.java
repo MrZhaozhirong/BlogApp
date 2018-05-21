@@ -3,7 +3,10 @@ package org.zzrblog.camera;
 import android.app.Activity;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
+import android.opengl.GLES20;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -16,6 +19,7 @@ import org.zzrblog.camera.util.AspectFrameLayout;
 import org.zzrblog.camera.util.CameraUtils;
 
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 
 /**
  * Created by zzr on 2018/5/9.
@@ -32,6 +36,7 @@ public class ContinuousRecordActivity extends Activity implements SurfaceHolder.
     private Camera mCamera;
     private int mCameraPreviewThousandFps;
     SurfaceView sv;
+    private MainHandler mHandler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,6 +46,8 @@ public class ContinuousRecordActivity extends Activity implements SurfaceHolder.
         sv = (SurfaceView) findViewById(R.id.continuousRecord_surfaceView);
         SurfaceHolder sh = sv.getHolder();
         sh.addCallback(this);
+
+        mHandler = new MainHandler(this);
     }
 
     @Override
@@ -112,6 +119,33 @@ public class ContinuousRecordActivity extends Activity implements SurfaceHolder.
     }
 
 
+    private static class MainHandler extends Handler {
+        private WeakReference<ContinuousRecordActivity> mWeakActivity;
+        public static final int MSG_FRAME_AVAILABLE = 1;
+
+        MainHandler(ContinuousRecordActivity activity) {
+            mWeakActivity = new WeakReference<ContinuousRecordActivity>(activity);
+        }
+
+        @Override
+        public void handleMessage(Message msg) {
+            ContinuousRecordActivity activity = mWeakActivity.get();
+            if (activity == null) {
+                Log.d(TAG, "Got message for dead activity");
+                return;
+            }
+            switch (msg.what) {
+                case MSG_FRAME_AVAILABLE:
+                    activity.drawFrame();
+                    break;
+                default:
+                    super.handleMessage(msg);
+                    break;
+            }
+        }
+    }
+
+
     private EglCore mEglCore;
     private WindowSurface mDisplaySurface;
     private int mTextureId;
@@ -130,7 +164,7 @@ public class ContinuousRecordActivity extends Activity implements SurfaceHolder.
         mCameraTexture.setOnFrameAvailableListener(new SurfaceTexture.OnFrameAvailableListener() {
             @Override
             public void onFrameAvailable(SurfaceTexture surfaceTexture) {
-                //Handler.sendEmptyMessage(MSG_FRAME_AVAILABLE);
+                mHandler.sendEmptyMessage(MainHandler.MSG_FRAME_AVAILABLE);
             }
         });
 
@@ -151,5 +185,19 @@ public class ContinuousRecordActivity extends Activity implements SurfaceHolder.
     @Override
     public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
 
+    }
+
+
+    private void drawFrame() {
+        if (mEglCore == null) {
+            Log.d(TAG, "Skipping drawFrame after shutdown");
+            return;
+        }
+        Log.d(TAG, " MSG_FRAME_AVAILABLE");
+        mDisplaySurface.makeCurrent();
+        GLES20.glClear( GLES20.GL_DEPTH_BUFFER_BIT | GLES20.GL_COLOR_BUFFER_BIT);
+        GLES20.glClearColor(1.0f, 0.0f, 1.0f, 1.0f);
+        mCameraTexture.updateTexImage();
+        mDisplaySurface.swapBuffers();
     }
 }

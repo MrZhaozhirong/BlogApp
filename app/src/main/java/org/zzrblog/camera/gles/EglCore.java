@@ -18,7 +18,7 @@ public class EglCore {
     private static String TAG = GlUtil.TAG;
     public static final int FLAG_RECORDABLE = 0x01;
     public static final int FLAG_TRY_GLES2 = 0x02;
-    public static final int FLAG_TRY_GLES3 = 0x03;
+    public static final int FLAG_TRY_GLES3 = 0x04;
     // EGLExt.EGL_RECORDABLE_ANDROID = 12610; (required 26)要求SDK26，我们自己定义就好了。
     private static final int EGL_RECORDABLE_ANDROID = 0x3142;
 

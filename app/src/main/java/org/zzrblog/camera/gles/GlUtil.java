@@ -10,6 +10,8 @@ import android.util.Log;
 
 public class GlUtil {
     public static final String TAG = "ZZR-GL";
+    private GlUtil() {} // do not instantiate
+
 
     public static void checkGlError(String op) {
         int error = GLES20.glGetError();
@@ -19,6 +21,15 @@ public class GlUtil {
             throw new RuntimeException(msg);
         }
     }
+
+    public static void checkLocation(int location, String label) {
+        if (location < 0) {
+            throw new RuntimeException("Unable to locate '" + label + "' in program");
+        }
+    }
+
+
+
 
     public static int createExternalTextureObject() {
         int[] textures = new int[1];
