@@ -11,6 +11,7 @@ import org.zzrblog.blogapp.R;
 import org.zzrblog.blogapp.cube.CubeActivity;
 import org.zzrblog.blogapp.hockey.HockeyActivity;
 import org.zzrblog.blogapp.panorama.PanoramaActivity;
+import org.zzrblog.camera.ContinuousRecordActivity;
 
 public class MainActivity extends Activity {
 
@@ -35,6 +36,9 @@ public class MainActivity extends Activity {
         startActivity(new Intent(MainActivity.this, PanoramaActivity.class));
     }
 
+    public void clickOnWatermarkRecord(@SuppressLint("USELESS") View view) {
+        startActivity(new Intent(MainActivity.this, ContinuousRecordActivity.class));
+    }
 
 
     private PermissionUtils.PermissionGrant mPermissionGrant = new PermissionUtils.PermissionGrant() {
@@ -74,4 +78,5 @@ public class MainActivity extends Activity {
             }
         }
     };
+
 }

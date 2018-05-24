@@ -13,7 +13,8 @@
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
         <Button
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -35,5 +36,13 @@
             android:layout_height="wrap_content"
             android:text="全景球"
             android:onClick="clickOnPanorama"/>
+        <Space
+            android:layout_width="1dp"
+            android:layout_height="wrap_content"/>
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="水印录制"
+            android:onClick="clickOnWatermarkRecord"/>
     </LinearLayout>
 </RelativeLayout>
