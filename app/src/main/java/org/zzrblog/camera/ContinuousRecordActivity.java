@@ -13,14 +13,11 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
 import org.zzrblog.blogapp.R;
-import org.zzrblog.blogapp.utils.TextureHelper;
 import org.zzrblog.camera.gles.EglCore;
 import org.zzrblog.camera.gles.GlUtil;
 import org.zzrblog.camera.gles.WindowSurface;
 import org.zzrblog.camera.objects.FrameRect;
-import org.zzrblog.camera.objects.WaterSignature;
 import org.zzrblog.camera.program.FrameRectSProgram;
-import org.zzrblog.camera.program.WaterSignSProgram;
 import org.zzrblog.camera.util.AspectFrameLayout;
 import org.zzrblog.camera.util.CameraUtils;
 
@@ -57,15 +54,13 @@ public class ContinuousRecordActivity extends Activity implements SurfaceHolder.
         mHandler = new MainHandler(this);
 
         mFrameRect = new FrameRect();
-        mWaterSign = new WaterSignature();
+        //mWaterSign = new WaterSignature();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         openCamera(VIDEO_WIDTH, VIDEO_HEIGHT, DESIRED_PREVIEW_FPS);
-
-        //loadSignBitmap();
     }
 
     @Override
@@ -185,14 +180,18 @@ public class ContinuousRecordActivity extends Activity implements SurfaceHolder.
     //    bitmap.getPixels(pixels,0,mSignTexWidth, 0,0,mSignTexWidth,mSignTexHeight);
     //    mSignTexBuffer = IntBuffer.wrap(pixels);
     //}
+    //mSignTexId = GlUtil.bitmapBuffer2Texture(mSignTexBuffer, mSignTexWidth, mSignTexHeight,
+    //        GLES20.GL_UNSIGNED_BYTE, GLES20.GL_RGBA, GLES20.GL_RGBA);
+
+
 
     private EglCore mEglCore;
     private WindowSurface mDisplaySurface;
     private int mTextureId;
     private SurfaceTexture mCameraTexture;
     private FrameRect mFrameRect;
-    private WaterSignature mWaterSign;
-    private int mSignTexId;
+    //private WaterSignature mWaterSign;
+    //private int mSignTexId;
 
     @Override
     public void surfaceCreated(SurfaceHolder surfaceHolder) {
@@ -212,10 +211,8 @@ public class ContinuousRecordActivity extends Activity implements SurfaceHolder.
         });
 
         mFrameRect.setShaderProgram(new FrameRectSProgram());
-        mWaterSign.setShaderProgram(new WaterSignSProgram());
-        //mSignTexId = GlUtil.bitmapBuffer2Texture(mSignTexBuffer, mSignTexWidth, mSignTexHeight,
-        //        GLES20.GL_UNSIGNED_BYTE, GLES20.GL_RGBA, GLES20.GL_RGBA);
-        mSignTexId = TextureHelper.loadTexture(ContinuousRecordActivity.this, R.mipmap.name);
+        //mWaterSign.setShaderProgram(new WaterSignSProgram());
+        //mSignTexId = TextureHelper.loadTexture(ContinuousRecordActivity.this, R.mipmap.name);
 
         try {
             Log.d(TAG, "starting camera preview");
@@ -246,8 +243,8 @@ public class ContinuousRecordActivity extends Activity implements SurfaceHolder.
         Log.d(TAG, " MSG_FRAME_AVAILABLE");
         mDisplaySurface.makeCurrent();
         GLES20.glClear( GLES20.GL_DEPTH_BUFFER_BIT | GLES20.GL_COLOR_BUFFER_BIT);
-        GLES20.glEnable(GLES20.GL_BLEND);
-        GLES20.glBlendFunc(GLES20.GL_ONE, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+        //GLES20.glEnable(GLES20.GL_BLEND);
+        //GLES20.glBlendFunc(GLES20.GL_ONE, GLES20.GL_ONE_MINUS_SRC_ALPHA);
         GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         mCameraTexture.updateTexImage();
         mCameraTexture.getTransformMatrix(mTmpMatrix);
@@ -255,8 +252,10 @@ public class ContinuousRecordActivity extends Activity implements SurfaceHolder.
         int viewHeight = sv.getHeight();
         GLES20.glViewport(0, 0, viewWidth, viewHeight);
         mFrameRect.drawFrame(mTextureId, mTmpMatrix);
-        GLES20.glViewport(0, 0, 288, 144);
-        mWaterSign.drawFrame(mSignTexId);
+        //GLES20.glViewport(0, 0, 288, 144);
+        //mWaterSign.drawFrame(mSignTexId);
         mDisplaySurface.swapBuffers();
+
+        //**CameraRecordEncoder.frameAvailable(mCameraTexture);
     }
 }
