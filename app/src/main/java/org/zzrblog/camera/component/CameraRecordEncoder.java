@@ -194,7 +194,7 @@ public class CameraRecordEncoder implements Runnable {
             }
         }
     }
-    // ---------------以下代码 供外部线程通信访问 CameraRecordEncoder工作线程不直接使用--------------------------------------
+    // ---------------以上代码 供外部线程通信访问 CameraRecordEncoder工作线程不直接使用--------------------------------------
 
 
 
@@ -204,13 +204,14 @@ public class CameraRecordEncoder implements Runnable {
 
 
     // ---------------以下部分代码 仅由编码器线程访问 ---------------------------------------------------------------------
-    private int mTextureId;
+    private int mFrameTextureId;
     private int mSignTexId;
     private CameraRecordEncoderCore mRecordEncoder;
     private EglCore mEglCore;
     private WindowSurface mRecorderInputSurface;
     private FrameRect mFrameRect;
     private WaterSignature mWaterSign;
+    private EncoderConfig mConfig;
 
     // handle Start Recording.
     private void handleStartRecording(EncoderConfig config) {
@@ -218,7 +219,7 @@ public class CameraRecordEncoder implements Runnable {
         try {
             mRecordEncoder = new CameraRecordEncoderCore(config.mWidth, config.mHeight,
                     config.mBitRate, config.mOutputFile);
-
+            mConfig = config;
             mSignTexId = TextureHelper.loadTexture(config.mContext, R.mipmap.name);
         } catch (IOException ioe) {
             throw new RuntimeException(ioe);
@@ -255,11 +256,11 @@ public class CameraRecordEncoder implements Runnable {
 
     private void handleSetTexture(int id) {
         Log.d(TAG, "handleSetTexture " + id);
-        mTextureId = id;
+        mFrameTextureId = id;
     }
 
     private void handleFrameAvailable(float[] transform, long timestampNanos) {
-        //先推动一次编码器把编码数据写入MP4
+        //先推动一次编码器工作，把编码后的数据写入Muxer
         mRecordEncoder.drainEncoder(false);
 
         mRecorderInputSurface.makeCurrent();
@@ -267,13 +268,11 @@ public class CameraRecordEncoder implements Runnable {
         GLES20.glEnable(GLES20.GL_BLEND);
         GLES20.glBlendFunc(GLES20.GL_ONE, GLES20.GL_ONE_MINUS_SRC_ALPHA);
         GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        GLES20.glViewport(0, 0,
-                mRecorderInputSurface.getWidth(),
-                mRecorderInputSurface.getHeight() );
-        mFrameRect.drawFrame(mTextureId, transform);
+        GLES20.glViewport(0, 0, mConfig.mWidth, mConfig.mHeight );
+        mFrameRect.drawFrame(mFrameTextureId, transform);
         GLES20.glViewport(0, 0, 288, 144);
         mWaterSign.drawFrame(mSignTexId);
-        // mRecorderInputSurface是获取 编码器的输入Surface创建的EGLSurface，
+        // mRecorderInputSurface是 获取编码器的输入Surface 创建的EGLSurface，
         // 以上的draw直接渲染到mRecorderInputSurface，喂养数据到编码器当中，非常方便。
         mRecorderInputSurface.setPresentationTime(timestampNanos);
         mRecorderInputSurface.swapBuffers();
