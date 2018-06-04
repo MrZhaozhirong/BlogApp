@@ -59,12 +59,19 @@ public class CameraRecordEncoder implements Runnable {
     }
 
     // ---------------以下代码 供外部线程通信访问 CameraRecordEncoder工作线程不直接使用--------------------------------------
+
+
     private volatile EncoderHandler mHandler;
     private final Object mSyncLock = new Object();
     private boolean mReady;
     private boolean mRunning;
     private volatile float[] transform = new float[16];
 
+    public boolean isRecording() {
+        synchronized (mSyncLock) {
+            return mRunning;
+        }
+    }
     /**
      * 开始视频录制。（一般是从其他非录制现场调用的）
      * 我们创建一个新线程，并且根据传入的录制配置EncoderConfig创建编码器。
@@ -181,6 +188,7 @@ public class CameraRecordEncoder implements Runnable {
                     break;
                 case MSG_QUIT:
                     Looper.myLooper().quit();
+                    mRunning = false;
                     break;
                 case MSG_FRAME_AVAILABLE:
                     long timestamp = (((long) msg.arg1) << 32) |

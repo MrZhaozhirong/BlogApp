@@ -26,14 +26,14 @@
 
     </org.zzrblog.camera.util.AspectFrameLayout>
 
+
     <ImageView
+        android:id="@+id/btn_record"
         android:layout_width="100dp"
         android:layout_height="40dp"
         android:src="@drawable/btn_background"
         android:clickable="true"
         android:layout_centerInParent="true"
         android:layout_alignParentBottom="true"/>
-
-
 
 </RelativeLayout>
