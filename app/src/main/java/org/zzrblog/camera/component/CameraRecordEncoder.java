@@ -14,6 +14,7 @@ import org.zzrblog.blogapp.R;
 import org.zzrblog.blogapp.utils.TextureHelper;
 import org.zzrblog.camera.gles.EglCore;
 import org.zzrblog.camera.gles.WindowSurface;
+import org.zzrblog.camera.objects.FBOFrameRect;
 import org.zzrblog.camera.objects.FrameRect;
 import org.zzrblog.camera.objects.WaterSignature;
 import org.zzrblog.camera.program.FrameRectSProgram;
@@ -219,6 +220,7 @@ public class CameraRecordEncoder implements Runnable {
     private WindowSurface mRecorderInputSurface;
     private FrameRect mFrameRect;
     private WaterSignature mWaterSign;
+    private FBOFrameRect mFBOFrameRect;
     private EncoderConfig mConfig;
 
     // handle Start Recording.
@@ -241,6 +243,9 @@ public class CameraRecordEncoder implements Runnable {
 
         mWaterSign = new WaterSignature();
         mWaterSign.setShaderProgram(new WaterSignSProgram());
+
+        mFBOFrameRect = new FBOFrameRect();
+        mFBOFrameRect.setShaderProgram(new WaterSignSProgram());
     }
 
     // Handles a request to stop encoding.
@@ -276,10 +281,13 @@ public class CameraRecordEncoder implements Runnable {
         GLES20.glEnable(GLES20.GL_BLEND);
         GLES20.glBlendFunc(GLES20.GL_ONE, GLES20.GL_ONE_MINUS_SRC_ALPHA);
         GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        //GLES20.glViewport(0, 0, mConfig.mWidth, mConfig.mHeight );
+        //mFrameRect.drawFrame(mFrameTextureId, transform);
+        //GLES20.glViewport(0, 0, 288, 144);
+        //mWaterSign.drawFrame(mSignTexId);
         GLES20.glViewport(0, 0, mConfig.mWidth, mConfig.mHeight );
-        mFrameRect.drawFrame(mFrameTextureId, transform);
-        GLES20.glViewport(0, 0, 288, 144);
-        mWaterSign.drawFrame(mSignTexId);
+        mFBOFrameRect.drawFrame(mFrameTextureId);
+
         // mRecorderInputSurface是 获取编码器的输入Surface 创建的EGLSurface，
         // 以上的draw直接渲染到mRecorderInputSurface，喂养数据到编码器当中，非常方便。
         mRecorderInputSurface.setPresentationTime(timestampNanos);

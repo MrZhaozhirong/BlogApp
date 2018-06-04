@@ -18,11 +18,13 @@ import android.view.View;
 import android.widget.ImageView;
 
 import org.zzrblog.blogapp.R;
+import org.zzrblog.blogapp.data.FrameBuffer;
 import org.zzrblog.blogapp.utils.TextureHelper;
 import org.zzrblog.camera.component.CameraRecordEncoder;
 import org.zzrblog.camera.gles.EglCore;
 import org.zzrblog.camera.gles.GlUtil;
 import org.zzrblog.camera.gles.WindowSurface;
+import org.zzrblog.camera.objects.FBOFrameRect;
 import org.zzrblog.camera.objects.FrameRect;
 import org.zzrblog.camera.objects.WaterSignature;
 import org.zzrblog.camera.program.FrameRectSProgram;
@@ -69,6 +71,7 @@ public class ContinuousRecordActivity extends Activity implements SurfaceHolder.
         mHandler = new MainHandler(this);
         mFrameRect = new FrameRect();
         mWaterSign = new WaterSignature();
+        mFBOFrameRect = new FBOFrameRect();
 
         mRecordEncoder = new CameraRecordEncoder();
         ImageView btnRecord = (ImageView) findViewById(R.id.btn_record);
@@ -226,6 +229,8 @@ public class ContinuousRecordActivity extends Activity implements SurfaceHolder.
     private WaterSignature mWaterSign;
     private int mSignTexId;
 
+    private FrameBuffer fbo;
+    private FBOFrameRect mFBOFrameRect;
     @Override
     public void surfaceCreated(SurfaceHolder surfaceHolder) {
         Log.d(TAG, "surfaceCreated holder=" + surfaceHolder);
@@ -256,6 +261,10 @@ public class ContinuousRecordActivity extends Activity implements SurfaceHolder.
         }
 
         recording = mRecordEncoder.isRecording();
+
+        mFBOFrameRect.setShaderProgram(new WaterSignSProgram());
+        fbo = new FrameBuffer();
+        fbo.setup(VIDEO_HEIGHT, VIDEO_WIDTH);
     }
 
     @Override
@@ -276,6 +285,8 @@ public class ContinuousRecordActivity extends Activity implements SurfaceHolder.
             return;
         }
         mDisplaySurface.makeCurrent();
+
+        fbo.begin();
         GLES20.glClear( GLES20.GL_DEPTH_BUFFER_BIT | GLES20.GL_COLOR_BUFFER_BIT);
         GLES20.glEnable(GLES20.GL_BLEND);
         GLES20.glBlendFunc(GLES20.GL_ONE, GLES20.GL_ONE_MINUS_SRC_ALPHA);
@@ -288,8 +299,11 @@ public class ContinuousRecordActivity extends Activity implements SurfaceHolder.
         mFrameRect.drawFrame(mTextureId, mTmpMatrix);
         GLES20.glViewport(0, 0, 288, 144);
         mWaterSign.drawFrame(mSignTexId);
-        mDisplaySurface.swapBuffers();
+        fbo.end();
+        GLES20.glViewport(0, 0, viewWidth, viewHeight);
+        mFBOFrameRect.drawFrame(fbo.getTextureId());
 
+        mDisplaySurface.swapBuffers();
 
         // 水印录制 状态设置
         if(mRequestRecord) {
@@ -298,7 +312,7 @@ public class ContinuousRecordActivity extends Activity implements SurfaceHolder.
                         outputFile, VIDEO_HEIGHT, VIDEO_WIDTH, 1000000,
                         EGL14.eglGetCurrentContext(), ContinuousRecordActivity.this));
 
-                mRecordEncoder.setTextureId(mTextureId);
+                mRecordEncoder.setTextureId(fbo.getTextureId());
                 recording = mRecordEncoder.isRecording();
             }
             // mRecordEncoder.setTextureId(mTextureId);
