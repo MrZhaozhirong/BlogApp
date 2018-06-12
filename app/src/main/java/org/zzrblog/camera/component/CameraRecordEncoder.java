@@ -17,7 +17,6 @@ import org.zzrblog.camera.gles.WindowSurface;
 import org.zzrblog.camera.objects.FBOFrameRect;
 import org.zzrblog.camera.objects.FrameRect;
 import org.zzrblog.camera.objects.WaterSignature;
-import org.zzrblog.camera.program.FrameRectSProgram;
 import org.zzrblog.camera.program.WaterSignSProgram;
 
 import java.io.File;
@@ -238,11 +237,11 @@ public class CameraRecordEncoder implements Runnable {
         mRecorderInputSurface = new WindowSurface(mEglCore, mRecordEncoder.getInputSurface(), true);
         mRecorderInputSurface.makeCurrent();
 
-        mFrameRect = new FrameRect();
-        mFrameRect.setShaderProgram(new FrameRectSProgram());
+        //mFrameRect = new FrameRect();
+        //mFrameRect.setShaderProgram(new FrameRectSProgram());
 
-        mWaterSign = new WaterSignature();
-        mWaterSign.setShaderProgram(new WaterSignSProgram());
+        //mWaterSign = new WaterSignature();
+        //mWaterSign.setShaderProgram(new WaterSignSProgram());
 
         mFBOFrameRect = new FBOFrameRect();
         mFBOFrameRect.setShaderProgram(new WaterSignSProgram());
