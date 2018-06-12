@@ -250,6 +250,7 @@ public class ContinuousRecordActivity extends Activity implements SurfaceHolder.
 
         mFrameRect.setShaderProgram(new FrameRectSProgram());
         mWaterSign.setShaderProgram(new WaterSignSProgram());
+        mFBOFrameRect.setShaderProgram(new WaterSignSProgram());
         mSignTexId = TextureHelper.loadTexture(ContinuousRecordActivity.this, R.mipmap.name);
 
         try {
@@ -262,7 +263,6 @@ public class ContinuousRecordActivity extends Activity implements SurfaceHolder.
 
         recording = mRecordEncoder.isRecording();
 
-        mFBOFrameRect.setShaderProgram(new WaterSignSProgram());
         fbo = new FrameBuffer();
         fbo.setup(VIDEO_HEIGHT, VIDEO_WIDTH);
     }
