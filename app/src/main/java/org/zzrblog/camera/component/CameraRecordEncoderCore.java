@@ -21,7 +21,7 @@ import static android.media.MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface
  */
 
 public class CameraRecordEncoderCore {
-    private static final String TAG = "CameraRecordEncoderCore";
+    private static final String TAG = "RecordEncoderCore";
     private static final boolean DEBUG = true;
     private static final int FRAME_RATE = 30;               // 30fps
     private static final int I_FRAME_INTERVAL = 5;          // I-frames 间隔 5s
