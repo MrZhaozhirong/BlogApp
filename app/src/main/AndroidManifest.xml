@@ -26,6 +26,8 @@
         <activity android:name="org.zzrblog.blogapp.cube.CubeActivity" />
         <activity android:name="org.zzrblog.blogapp.panorama.PanoramaActivity" />
         <activity android:name="org.zzrblog.camera.ContinuousRecordActivity" />
+
+        <activity android:name="org.zzrblog.fmod.FmodActivity" />
     </application>
 
 </manifest>
