@@ -28,6 +28,7 @@
         <activity android:name="org.zzrblog.camera.ContinuousRecordActivity" />
 
         <activity android:name="org.zzrblog.fmod.FmodActivity" />
+        <activity android:name="org.zzrblog.fmod.EffectActivity" />
     </application>
 
 </manifest>
