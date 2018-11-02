@@ -38,3 +38,19 @@ target_link_libraries( # 指定目标链接库
                        fmod
                        fmodL)
 
+
+
+
+add_library( # 生成动态库的名称
+             fmod-effect-lib
+             # 指定是动态库SO
+             SHARED
+             # 编译库的源代码文件
+             src/main/cpp/fmod/effect_sound.cpp)
+
+target_link_libraries( # 指定目标链接库
+                       fmod-effect-lib
+                       # 添加预编译库到目标链接库中
+                       ${log-lib}
+                       fmod
+                       fmodL)
