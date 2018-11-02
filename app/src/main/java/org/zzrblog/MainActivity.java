@@ -12,6 +12,7 @@ import org.zzrblog.blogapp.cube.CubeActivity;
 import org.zzrblog.blogapp.hockey.HockeyActivity;
 import org.zzrblog.blogapp.panorama.PanoramaActivity;
 import org.zzrblog.camera.ContinuousRecordActivity;
+import org.zzrblog.fmod.EffectActivity;
 import org.zzrblog.fmod.FmodActivity;
 
 public class MainActivity extends Activity {
@@ -43,6 +44,10 @@ public class MainActivity extends Activity {
 
     public void clickOnFmod(View view) {
         startActivity(new Intent(MainActivity.this, FmodActivity.class));
+    }
+
+    public void clickOnFmodEffect(View view){
+        startActivity(new Intent(MainActivity.this, EffectActivity.class));
     }
 
     private PermissionUtils.PermissionGrant mPermissionGrant = new PermissionUtils.PermissionGrant() {

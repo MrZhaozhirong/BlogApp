@@ -52,5 +52,13 @@
             android:layout_height="wrap_content"
             android:text="FMOD-DEMO"
             android:onClick="clickOnFmod"/>
+        <Space
+            android:layout_width="1dp"
+            android:layout_height="wrap_content"/>
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="FMOD-EFFECT"
+            android:onClick="clickOnFmodEffect"/>
     </LinearLayout>
 </RelativeLayout>

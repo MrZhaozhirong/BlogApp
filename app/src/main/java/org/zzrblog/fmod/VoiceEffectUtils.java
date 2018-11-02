@@ -29,6 +29,6 @@ public class VoiceEffectUtils {
         try { System.loadLibrary("fmod");
         } catch (UnsatisfiedLinkError e) { }
 
-        //System.loadLibrary("编写的库名字");
+        System.loadLibrary("fmod-effect-lib");
     }
 }

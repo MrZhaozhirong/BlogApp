@@ -2,13 +2,10 @@ package org.zzrblog.fmod;
 
 import android.app.Activity;
 import android.os.Bundle;
-import android.os.Environment;
 import android.support.annotation.Nullable;
 import android.view.View;
 
 import org.zzrblog.blogapp.R;
-
-import java.io.File;
 
 /**
  * Created by zzr on 2018/10/29.
@@ -31,8 +28,8 @@ public class EffectActivity extends Activity {
         org.fmod.FMOD.close();
     }
 
-    public void onClickedEffect(View btn){
-        String path = Environment.getExternalStorageDirectory().getAbsolutePath() + File.pathSeparator + "singing.wav";
+    public void onClickedEffect(View btn) {
+        //String path = Environment.getExternalStorageDirectory().getAbsolutePath() + File.pathSeparator + "singing.wav";
         //String path = "file:///android_asset/"+"dfb.mp3";
         switch (btn.getId()) {
             case R.id.btn_normal:
