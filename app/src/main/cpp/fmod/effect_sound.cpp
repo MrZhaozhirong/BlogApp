@@ -69,7 +69,7 @@ void Java_org_zzrblog_fmod_VoiceEffectUtils_play(JNIEnv *env, jclass clazz, jint
                 //FMOD_DSP_TYPE_PITCHSHIFT dsp，fmod中预定义好的音效，提升或者降低音调用的一种音效
                 system->createDSPByType(FMOD_DSP_TYPE_PITCHSHIFT, &dsp);
                 //设置音调的参数
-                dsp->setParameterFloat(FMOD_DSP_PITCHSHIFT_PITCH,2.5);
+                dsp->setParameterFloat(FMOD_DSP_PITCHSHIFT_PITCH, 2.5);
                 //触发音频播放
                 system->playSound(sound, 0, false, &channel);
                 //添加到channel
