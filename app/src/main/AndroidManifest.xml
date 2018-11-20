@@ -9,11 +9,13 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
 
     <application
+        android:name="org.zzrblog.ZzrApplication"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
+
         <activity android:name="org.zzrblog.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
@@ -29,6 +31,9 @@
 
         <activity android:name="org.zzrblog.fmod.FmodActivity" />
         <activity android:name="org.zzrblog.fmod.EffectActivity" />
+
+        <service android:name="org.zzrblog.mp.TestAIDLService"
+                 android:process=":mprocess2"/>
     </application>
 
 </manifest>
