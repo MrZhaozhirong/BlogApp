@@ -295,10 +295,9 @@ public class PermissionUtils {
             }
 
             if (checkSelfPermission != PackageManager.PERMISSION_GRANTED) {
-                Log.i(TAG, "getNoGrantedPermission ActivityCompat.checkSelfPermission != PackageManager.PERMISSION_GRANTED:" + requestPermission);
+                //Log.i(TAG, "getNoGrantedPermission ActivityCompat.checkSelfPermission != PackageManager.PERMISSION_GRANTED:" + requestPermission);
 
                 if (ActivityCompat.shouldShowRequestPermissionRationale(activity, requestPermission)) {
-                    Log.d(TAG, "shouldShowRequestPermissionRationale if");
                     if (isShouldRationale) {
                         permissions.add(requestPermission);
                     }
@@ -308,7 +307,6 @@ public class PermissionUtils {
                     if (!isShouldRationale) {
                         permissions.add(requestPermission);
                     }
-                    Log.d(TAG, "shouldShowRequestPermissionRationale else");
                 }
 
             }
