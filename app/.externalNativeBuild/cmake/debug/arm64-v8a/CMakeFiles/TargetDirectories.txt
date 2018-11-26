@@ -1,0 +1,3 @@
+F:/as_work/BlogApp/app/.externalNativeBuild/cmake/debug/arm64-v8a/CMakeFiles/native-lib.dir
+F:/as_work/BlogApp/app/.externalNativeBuild/cmake/debug/arm64-v8a/CMakeFiles/edit_cache.dir
+F:/as_work/BlogApp/app/.externalNativeBuild/cmake/debug/arm64-v8a/CMakeFiles/rebuild_cache.dir
