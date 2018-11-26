@@ -1,3 +1,0 @@
-F:/as_work/BlogApp/app/.externalNativeBuild/cmake/debug/mips/CMakeFiles/native-lib.dir
-F:/as_work/BlogApp/app/.externalNativeBuild/cmake/debug/mips/CMakeFiles/edit_cache.dir
-F:/as_work/BlogApp/app/.externalNativeBuild/cmake/debug/mips/CMakeFiles/rebuild_cache.dir
