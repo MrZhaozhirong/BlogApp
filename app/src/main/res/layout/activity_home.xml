@@ -15,8 +15,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:background="@android:color/transparent"
-        android:gravity="end">
+        android:background="@android:color/transparent">
         <Button
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -68,21 +67,9 @@
         <Button
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="多进程1-AIDL"
-            android:onClick="clickOnMultiProcess1"/>
+            android:text="多进程测试页"
+            android:onClick="clickOnMultiProcess"/>
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/logView"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:maxLines="100"
-        android:textColor="@android:color/black"
-        android:textAppearance="@style/TextAppearance.AppCompat.Small"
-        android:scrollbars="vertical"
-        android:scrollbarStyle="insideInset"
-        android:padding="10dp"
-        android:fadeScrollbars="false"
-        android:scrollbarFadeDuration="2000"
-        android:background="#00000000"/>
+
 </RelativeLayout>
