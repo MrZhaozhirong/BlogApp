@@ -11,12 +11,16 @@ android {
         versionName "1.0"
         externalNativeBuild {
             cmake {
-                cppFlags ""
+                cppFlags '-fexceptions', '-frtti'
                 abiFilters 'armeabi','armeabi-v7a'
             }
         }
     }
     buildTypes {
+        debug {
+            jniDebuggable true
+            jniDebuggable = true
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'

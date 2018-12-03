@@ -116,13 +116,13 @@ add_library( # 生成动态库的名称
              # 指定是动态库SO
              SHARED
              # 编译库的源代码文件
-             src/main/cpp/ffmpeg/zzr_ffmpeg_util.cpp)
+             src/main/cpp/ffmpeg/zzr_ffmpeg_util.c)
 
 target_link_libraries( # 指定目标链接库
                        zzr-ffmpeg-utils
                        # 添加预编译库到目标链接库中
                        ${log-lib}
+                       avutil
                        avcodec
                        avformat
-                       avutil
-                       swscale)
+                       swscale )
