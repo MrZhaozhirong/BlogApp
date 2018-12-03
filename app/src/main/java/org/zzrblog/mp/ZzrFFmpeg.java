@@ -16,11 +16,18 @@ public class ZzrFFmpeg {
     {
         // Try loading libraries...
         try {
+            System.loadLibrary("avutil");
+            System.loadLibrary("swscale");
+            System.loadLibrary("swresample");
             System.loadLibrary("avcodec");
             System.loadLibrary("avformat");
-            System.loadLibrary("avutil");
+
+            System.loadLibrary("postproc");
+            System.loadLibrary("avfilter");
+            System.loadLibrary("avdevice");
+
             System.loadLibrary("zzr-ffmpeg-utils");
-            Log.w("ZzrFFmpeg", "ZzrFFmpeg System.loadLibrary ...");
+            Log.w("ZzrBlogApp", "ZzrFFmpeg System.loadLibrary ...");
         } catch (Exception e) {
             e.printStackTrace();
         }

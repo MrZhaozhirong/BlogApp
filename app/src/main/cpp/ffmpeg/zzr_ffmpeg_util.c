@@ -5,9 +5,6 @@
 #include <jni.h>
 #include "../zzr_blog_common.h"
 #include "include/libavformat/avformat.h"
-#include "include/libavcodec/avcodec.h"
-#include "include/libavutil/avutil.h"
-#include "include/libavutil/frame.h"
 #include "include/libavutil/imgutils.h"
 #include "include/libswscale/swscale.h"
 
@@ -15,8 +12,10 @@
 JNIEXPORT jint JNICALL
 Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_path_jstr, jstring output_path_jstr) {
 
-    const char *input_path_cstr = env->GetStringUTFChars(input_path_jstr, 0);
-    const char *output_path_cstr = env->GetStringUTFChars(output_path_jstr, 0);
+    //const char *input_path_cstr = env->GetStringUTFChars(input_path_jstr, 0);
+    //const char *output_path_cstr = env->GetStringUTFChars(output_path_jstr, 0);
+    const char *input_path_cstr = (*env)->GetStringUTFChars(env, input_path_jstr, 0);
+    const char *output_path_cstr = (*env)->GetStringUTFChars(env, output_path_jstr, 0);
     LOGD("输入文件：%s", input_path_cstr);
     LOGD("输出文件：%s", output_path_cstr);
 
@@ -45,14 +44,23 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_
             break;
         }
     }
+    LOGD("VIDEO的索引位置：%d", video_stream_idx);
     // 提取对应的解码器。
     AVCodec *pCodec = avcodec_find_decoder(pFormatContext->streams[video_stream_idx]->codecpar->codec_id);
+    if(pCodec == NULL) {
+        LOGE("%s","解码器创建失败.");
+        return -3;
+    }
     // 创建解码器对应的上下文
     AVCodecContext * pCodeContext = avcodec_alloc_context3(pCodec);
+    if(pCodeContext == NULL) {
+        LOGE("%s","创建解码器对应的上下文失败.");
+        return -4;
+    }
     // 打开解码器
     if(avcodec_open2(pCodeContext, pCodec, NULL) < 0){
         LOGE("%s","解码器无法打开");
-        return -3;
+        return -5;
     } else {
         LOGI("当前解码器pix_fmt：%d", pCodeContext->pix_fmt);
     }
@@ -78,7 +86,7 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_
 
     //用于像素格式转换或者缩放
     struct SwsContext *sws_ctx = sws_getContext(
-            pCodeContext->width, pCodeContext->height, pCodeContext->pix_fmt,
+            pCodeContext->width, pCodeContext->height, AV_PIX_FMT_RGB24,
             pCodeContext->width, pCodeContext->height, AV_PIX_FMT_YUV420P,
             SWS_BILINEAR, NULL, NULL, NULL);
 
@@ -112,14 +120,17 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_
 
 
     // 结束回收工作
+    sws_freeContext(sws_ctx);
     av_free(out_buffer);
     av_frame_free(&frame);
     av_frame_free(&yuvFrame);
     avcodec_close(pCodeContext);
     avformat_free_context(pFormatContext);
 
-    env->ReleaseStringUTFChars(input_path_jstr, input_path_cstr);
-    env->ReleaseStringUTFChars(output_path_jstr, output_path_cstr);
+    //env->ReleaseStringUTFChars(input_path_jstr, input_path_cstr);
+    //env->ReleaseStringUTFChars(output_path_jstr, output_path_cstr);
+    (*env)->ReleaseStringUTFChars(env, input_path_jstr, input_path_cstr);
+    (*env)->ReleaseStringUTFChars(env, output_path_jstr, output_path_cstr);
     return 0;
 }
 
