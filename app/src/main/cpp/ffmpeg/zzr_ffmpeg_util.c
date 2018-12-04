@@ -52,17 +52,17 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_
         return -3;
     }
     // 创建解码器对应的上下文
-    AVCodecContext * pCodeContext = avcodec_alloc_context3(pCodec);
-    if(pCodeContext == NULL) {
+    AVCodecContext * pCodecContext = avcodec_alloc_context3(pCodec);
+    if(pCodecContext == NULL) {
         LOGE("%s","创建解码器对应的上下文失败.");
         return -4;
     }
     // 打开解码器
-    if(avcodec_open2(pCodeContext, pCodec, NULL) < 0){
+    if(avcodec_open2(pCodecContext, pCodec, NULL) < 0){
         LOGE("%s","解码器无法打开");
         return -5;
     } else {
-        LOGI("当前解码器pix_fmt：%d", pCodeContext->pix_fmt);
+        LOGI("当前解码器pix_fmt：%d", pCodecContext->pix_fmt);
     }
 
 
@@ -75,45 +75,65 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_
     AVFrame *yuvFrame = av_frame_alloc();
 
     // 为yuvFrame缓冲区分配内存，只有指定了AVFrame的像素格式、画面大小才能真正分配内存
-    int buffer_size = av_image_get_buffer_size(AV_PIX_FMT_YUV420P, pCodeContext->width, pCodeContext->height, 1);
+    int buffer_size = av_image_get_buffer_size(AV_PIX_FMT_YUV420P, pCodecContext->width, pCodecContext->height, 1);
     uint8_t *out_buffer = (uint8_t *)av_malloc((size_t) buffer_size);
     // 初始化yuvFrame缓冲区
     av_image_fill_arrays(yuvFrame->data, yuvFrame->linesize, out_buffer,
-                         AV_PIX_FMT_YUV420P, pCodeContext->width, pCodeContext->height, 1 );
+                         AV_PIX_FMT_YUV420P, pCodecContext->width, pCodecContext->height, 1 );
 
     // 打开输出文件
     FILE* fp_yuv = fopen(output_path_cstr,"wb");
 
     //用于像素格式转换或者缩放
     struct SwsContext *sws_ctx = sws_getContext(
-            pCodeContext->width, pCodeContext->height, AV_PIX_FMT_RGB24,
-            pCodeContext->width, pCodeContext->height, AV_PIX_FMT_YUV420P,
-            SWS_BILINEAR, NULL, NULL, NULL);
+            pCodecContext->width, pCodecContext->height, pCodecContext->pix_fmt,
+            pCodecContext->width, pCodecContext->height, AV_PIX_FMT_YUV420P,
+            SWS_BICUBIC, NULL, NULL, NULL); //SWS_BILINEAR
 
-    int len, isGot, frameCount = 0;
+    int ret, isGot, frameCount = 0;
     // 5. 循环读取压缩的视频数据 AVPacket
     while(av_read_frame(pFormatContext, packet) >= 0){
-        //解码AVPacket->AVFrame
-        len = avcodec_decode_video2(pCodeContext, frame, &isGot, packet);
-        //Zero if no frame could be decompressed
-        if(isGot){
-            //frame->yuvFrame (YUV420P)
-            //RGB转为指定的YUV420P像素帧
-            sws_scale(sws_ctx,
-                      frame->data, frame->linesize, 0, frame->height,
-                      yuvFrame->data, yuvFrame->linesize);
-            //向YUV文件保存解码之后的帧数据
-            //AVFrame->YUV
-            //一个像素包含一个Y
-            int y_size = pCodeContext->width * pCodeContext->height;
-            fwrite(yuvFrame->data[0], 1, (size_t) y_size, fp_yuv);
-            fwrite(yuvFrame->data[1], 1, (size_t) y_size/4, fp_yuv);
-            fwrite(yuvFrame->data[2], 1, (size_t) y_size/4, fp_yuv);
+        if(packet->stream_index == video_stream_idx) {
+            //解码AVPacket->AVFrame
+            ret = avcodec_decode_video2(pCodecContext, frame, &isGot, packet);
+            if(ret < 0){
+                LOGE("解码失败.\n");
+            }
+            //Zero if no frame could be decompressed
+            if(isGot){
+                //frame->yuvFrame (YUV420P)
+                //RGB转为指定的YUV420P像素帧
+                sws_scale(sws_ctx,
+                          (const uint8_t* const*)frame->data, frame->linesize, 0, frame->height,
+                          yuvFrame->data, yuvFrame->linesize);
+                //向YUV文件保存解码之后的帧数据
+                //AVFrame->YUV
+                //一个像素包含一个Y
+                int y_size = pCodecContext->width * pCodecContext->height;
+                fwrite(yuvFrame->data[0], 1, (size_t) y_size, fp_yuv);
+                fwrite(yuvFrame->data[1], 1, (size_t) y_size/4, fp_yuv);
+                fwrite(yuvFrame->data[2], 1, (size_t) y_size/4, fp_yuv);
 
-            frameCount++ ;
+                frameCount++ ;
+            }
         }
-
         av_free_packet(packet);
+    }
+    //flush decoder
+    //FIX: Flush Frames remained in Codec
+    while (1) {
+        ret = avcodec_decode_video2(pCodecContext, frame, &isGot, packet);
+        if (ret < 0)
+            break;
+        if (!isGot)
+            break;
+        sws_scale(sws_ctx, (const uint8_t* const*)frame->data, frame->linesize, 0, frame->height,
+                  yuvFrame->data, yuvFrame->linesize);
+        int y_size = pCodecContext->width * pCodecContext->height;
+        fwrite(yuvFrame->data[0], 1, (size_t) y_size, fp_yuv);
+        fwrite(yuvFrame->data[1], 1, (size_t) (y_size / 4), fp_yuv);
+        fwrite(yuvFrame->data[2], 1, (size_t) (y_size / 4), fp_yuv);
+        frameCount++;
     }
     LOGI("总共解码%d帧",frameCount++);
     fclose(fp_yuv);
@@ -124,7 +144,7 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_
     av_free(out_buffer);
     av_frame_free(&frame);
     av_frame_free(&yuvFrame);
-    avcodec_close(pCodeContext);
+    avcodec_close(pCodecContext);
     avformat_free_context(pFormatContext);
 
     //env->ReleaseStringUTFChars(input_path_jstr, input_path_cstr);
