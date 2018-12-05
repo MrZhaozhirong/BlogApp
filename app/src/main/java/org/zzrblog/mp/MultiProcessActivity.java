@@ -126,14 +126,14 @@ public class MultiProcessActivity extends Activity {
             boolean delete = new File(output_str).delete();
             if(!delete) return;
         }
-        //try {
-        //    int i = mFFmpegAIDLInterface.Mp4_TO_YUV(input_str, output_str);
-        //    showLogView("Mp4_TO_YUV return:"+i);
-        //} catch (RemoteException e) {
-        //    e.printStackTrace();
-        //}
+        try {
+            int i = mFFmpegAIDLInterface.Mp4_TO_YUV(input_str, output_str);
+            showLogView("Mp4_TO_YUV return:"+i);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
 
-        ZzrFFmpeg.Mp4TOYuv(input_str, output_str);
+        //ZzrFFmpeg.Mp4TOYuv(input_str, output_str);
     }
 
 
