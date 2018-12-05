@@ -69,10 +69,12 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_
         LOGE("%s","创建解码器对应的上下文失败.");
         return -4;
     }
-    pCodecContext->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
-    pCodecContext->width = 1920;
-    pCodecContext->height = 1080;
-    pCodecContext->pix_fmt = AV_PIX_FMT_YUV420P;
+    // 坑位！！！
+    //pCodecContext->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+    //pCodecContext->width = pFormatContext->streams[video_stream_idx]->codecpar->width;
+    //pCodecContext->height = pFormatContext->streams[video_stream_idx]->codecpar->height;
+    //pCodecContext->pix_fmt = AV_PIX_FMT_YUV420P;
+    avcodec_parameters_to_context(pCodecContext, pFormatContext->streams[video_stream_idx]->codecpar);
     // 打开解码器
     if(avcodec_open2(pCodecContext, pCodec, NULL) < 0){
         LOGE("%s","解码器无法打开");
@@ -85,8 +87,6 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_
     // 4.解码准备，多看多理解。
 
     // 解压缩数据对象
-    //AVPacket *packet = (AVPacket *)av_malloc(sizeof(AVPacket));
-    //av_init_packet(packet);
     AVPacket *packet = av_packet_alloc();
     // 解码数据对象
     AVFrame *frame = av_frame_alloc();
@@ -103,7 +103,7 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_
     FILE* fp_yuv = fopen(output_path_cstr,"wb");
     // test：264输出文件
     char save264str[100]={0};
-    sprintf(save264str,"%s", "/storage/emulated/0/10s_test.h264");
+    sprintf(save264str, "%s", "/storage/emulated/0/10s_test.h264");
     FILE* fp_264 = fopen(save264str,"wb");
 
     //用于像素格式转换或者缩放
@@ -121,46 +121,41 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_
             // test：h264数据写入本地文件
             fwrite(packet->data, 1, (size_t) packet->size, fp_264);
             //AVPacket->AVFrame
-            ret = avcodec_decode_video2(pCodecContext, frame, &isGot, packet);
+            ret = avcodec_send_packet(pCodecContext, packet);
             if(ret < 0){
-                LOGE("解码失败：%d\n", ret);
+                LOGE("avcodec_send_packet：%d\n", ret);
+                continue;
             }
-            //Zero if no frame could be decompressed
-            if(isGot){
-                //frame->yuvFrame (YUV420P)
-                //RGB转为指定的YUV420P像素帧
-                sws_scale(sws_ctx,
-                          (const uint8_t* const*)frame->data, frame->linesize, 0, frame->height,
-                          yuvFrame->data, yuvFrame->linesize);
-                //向YUV文件保存解码之后的帧数据
-                //AVFrame->YUV
-                //一个像素包含一个Y
-                int y_size = frame->width * frame->height;
-                fwrite(yuvFrame->data[0], 1, (size_t) y_size, fp_yuv);
-                fwrite(yuvFrame->data[1], 1, (size_t) y_size/4, fp_yuv);
-                fwrite(yuvFrame->data[2], 1, (size_t) y_size/4, fp_yuv);
-
-                frameCount++ ;
+            while(ret >= 0) {
+                ret = avcodec_receive_frame(pCodecContext, frame);
+                if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF){
+                    LOGD("avcodec_receive_frame：%d\n", ret);
+                    break;
+                }else if (ret < 0) {
+                    LOGW("avcodec_receive_frame：%d\n", AVERROR(ret));
+                    goto end;  //end处进行资源释放等善后处理
+                }
+                if (ret >= 0)
+                {   //frame->yuvFrame (YUV420P)
+                    sws_scale(sws_ctx,
+                              (const uint8_t* const*)frame->data, frame->linesize, 0, frame->height,
+                              yuvFrame->data, yuvFrame->linesize);
+                    //向YUV文件保存解码之后的帧数据
+                    //AVFrame->YUV，一个像素包含一个Y
+                    int y_size = frame->width * frame->height;
+                    fwrite(yuvFrame->data[0], 1, (size_t) y_size, fp_yuv);
+                    fwrite(yuvFrame->data[1], 1, (size_t) y_size/4, fp_yuv);
+                    fwrite(yuvFrame->data[2], 1, (size_t) y_size/4, fp_yuv);
+                    frameCount++ ;
+                }
             }
         }
-        av_free_packet(packet);
+        av_packet_unref(packet);
     }
-    //flush decoder
-    //FIX: Flush Frames remained in Codec
-    while (1) {
-        ret = avcodec_decode_video2(pCodecContext, frame, &isGot, packet);
-        if (ret < 0)
-            break;
-        if (!isGot)
-            break;
-        sws_scale(sws_ctx, (const uint8_t* const*)frame->data, frame->linesize, 0, frame->height,
-                  yuvFrame->data, yuvFrame->linesize);
-        int y_size = pCodecContext->width * pCodecContext->height;
-        fwrite(yuvFrame->data[0], 1, (size_t) y_size, fp_yuv);
-        fwrite(yuvFrame->data[1], 1, (size_t) (y_size / 4), fp_yuv);
-        fwrite(yuvFrame->data[2], 1, (size_t) (y_size / 4), fp_yuv);
-        frameCount++;
-    }
+
+
+
+end:
     LOGI("总共解码%d帧",frameCount++);
     fclose(fp_yuv);
     fclose(fp_264);
