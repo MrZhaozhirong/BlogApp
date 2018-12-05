@@ -8,6 +8,15 @@
 #include "include/libavutil/imgutils.h"
 #include "include/libswscale/swscale.h"
 
+//Output FFmpeg's av_log()
+void custom_log(void *ptr, int level, const char* fmt, va_list vl){
+    FILE *fp=fopen("/storage/emulated/0/av_log.txt","a+");
+    if(fp){
+        vfprintf(fp,fmt,vl);
+        fflush(fp);
+        fclose(fp);
+    }
+}
 
 JNIEXPORT jint JNICALL
 Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_path_jstr, jstring output_path_jstr) {
@@ -19,8 +28,10 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_
     LOGD("输入文件：%s", input_path_cstr);
     LOGD("输出文件：%s", output_path_cstr);
 
+    av_log_set_callback(custom_log);
     // 1.注册组件
     av_register_all();
+    avcodec_register_all();
     avformat_network_init();
     // 2.获取格式上下文指针，便于打开媒体容器文件获取媒体信息
     AVFormatContext *pFormatContext = avformat_alloc_context();
@@ -58,6 +69,7 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_
         LOGE("%s","创建解码器对应的上下文失败.");
         return -4;
     }
+    pCodecContext->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
     pCodecContext->width = 1920;
     pCodecContext->height = 1080;
     pCodecContext->pix_fmt = AV_PIX_FMT_YUV420P;
@@ -102,7 +114,8 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_
 
     int ret, isGot, frameCount = 0;
     // 5. 循环读取视频数据的分包 AVPacket
-    while(av_read_frame(pFormatContext, packet) >= 0){
+    while(av_read_frame(pFormatContext, packet) >= 0)
+    {
         if(packet->stream_index == video_stream_idx)
         {
             // test：h264数据写入本地文件
@@ -158,6 +171,8 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_
     av_frame_free(&frame);
     av_frame_free(&yuvFrame);
     avcodec_close(pCodecContext);
+    avcodec_free_context(&pCodecContext);
+    avformat_close_input(&pFormatContext);
     avformat_free_context(pFormatContext);
 
     //env->ReleaseStringUTFChars(input_path_jstr, input_path_cstr);
