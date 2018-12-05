@@ -112,7 +112,7 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_
             pCodecContext->width, pCodecContext->height, AV_PIX_FMT_YUV420P, // AV_PIX_FMT_RGB24
             SWS_BICUBIC, NULL, NULL, NULL); //SWS_BILINEAR
 
-    int ret, isGot, frameCount = 0;
+    int ret, frameCount = 0;
     // 5. 循环读取视频数据的分包 AVPacket
     while(av_read_frame(pFormatContext, packet) >= 0)
     {
