@@ -46,7 +46,7 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_
         return -2;
     }
 
-    // 3.准备视频解码器，需要找到视频对应的AVStream所在pFormatCtx->streams中，是VIDEO的索引位置
+    // 3.准备视频解码器，根据视频AVStream所在pFormatCtx->streams中位置，找出索引
     int video_stream_idx = -1;
     for(int i=0; i<pFormatContext->nb_streams; i++)
     {
@@ -57,13 +57,13 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_
         }
     }
     LOGD("VIDEO的索引位置：%d", video_stream_idx);
-    // 提取对应的解码器。
+    // 根据codec_parameter的codec索引，提取对应的解码器。
     AVCodec *pCodec = avcodec_find_decoder(pFormatContext->streams[video_stream_idx]->codecpar->codec_id);
     if(pCodec == NULL) {
         LOGE("%s","解码器创建失败.");
         return -3;
     }
-    // 创建解码器对应的上下文
+    // 4.创建解码器对应的上下文
     AVCodecContext * pCodecContext = avcodec_alloc_context3(pCodec);
     if(pCodecContext == NULL) {
         LOGE("%s","创建解码器对应的上下文失败.");
@@ -75,7 +75,7 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_
     //pCodecContext->height = pFormatContext->streams[video_stream_idx]->codecpar->height;
     //pCodecContext->pix_fmt = AV_PIX_FMT_YUV420P;
     avcodec_parameters_to_context(pCodecContext, pFormatContext->streams[video_stream_idx]->codecpar);
-    // 打开解码器
+    // 5.打开解码器
     if(avcodec_open2(pCodecContext, pCodec, NULL) < 0){
         LOGE("%s","解码器无法打开");
         return -5;
@@ -84,7 +84,7 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_
     }
 
 
-    // 4.解码准备，多看多理解。
+    // 解码流程，多看多理解。
 
     // 解压缩数据对象
     AVPacket *packet = av_packet_alloc();
@@ -92,7 +92,7 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_
     AVFrame *frame = av_frame_alloc();
     AVFrame *yuvFrame = av_frame_alloc();
 
-    // 为yuvFrame缓冲区分配内存，只有指定了AVFrame的像素格式、画面大小才能真正分配内存
+        // 为yuvFrame缓冲区分配内存，只有指定了AVFrame的像素格式、画面大小才能真正分配内存
     int buffer_size = av_image_get_buffer_size(AV_PIX_FMT_YUV420P, pCodecContext->width, pCodecContext->height, 1);
     uint8_t *out_buffer = (uint8_t *)av_malloc((size_t) buffer_size);
     // 初始化yuvFrame缓冲区
@@ -152,15 +152,14 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_
         }
         av_packet_unref(packet);
     }
-
+    LOGI("总共解码%d帧",frameCount++);
 
 
 end:
-    LOGI("总共解码%d帧",frameCount++);
+    // 结束回收工作
     fclose(fp_yuv);
     fclose(fp_264);
 
-    // 结束回收工作
     sws_freeContext(sws_ctx);
     av_free(out_buffer);
     av_frame_free(&frame);
