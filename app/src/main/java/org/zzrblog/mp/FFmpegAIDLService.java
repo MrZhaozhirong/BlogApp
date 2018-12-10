@@ -65,7 +65,7 @@ public class FFmpegAIDLService extends Service {
 
         @Override
         public int Mp4_TO_YUV(String input_path_str, String output_path_str) throws RemoteException {
-
+            sendDebugMsg(name+" begin Mp4_TO_YUV");
             return ZzrFFmpeg.Mp4TOYuv(input_path_str, output_path_str);
         }
 

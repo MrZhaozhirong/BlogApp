@@ -3,7 +3,7 @@
 //
 
 #include <jni.h>
-#include "../zzr_blog_common.h"
+#include "../log_common.h"
 #include "include/libavformat/avformat.h"
 #include "include/libavutil/imgutils.h"
 #include "include/libswscale/swscale.h"
@@ -104,7 +104,7 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_
     // test：264输出文件
     char save264str[100]={0};
     sprintf(save264str, "%s", "/storage/emulated/0/10s_test.h264");
-    FILE* fp_264 = fopen(save264str,"wb");
+    FILE* fp_264 = fopen(save264str,"ab+");
 
     //用于像素格式转换或者缩放
     struct SwsContext *sws_ctx = sws_getContext(
