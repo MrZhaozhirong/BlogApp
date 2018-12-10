@@ -6,8 +6,12 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/src/main/jniLibs/${ANDR
 # 在系统找出预编译的log-lib库，指定在CMake脚本下的别名为log
 find_library( log-lib log )
 
-
-
+# 为log_common.h 指定平台
+IF (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
+    ADD_DEFINITIONS(-DWindows)
+ELSE (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
+    ADD_DEFINITIONS(-DLinux)
+ENDIF ()
 
 
 
