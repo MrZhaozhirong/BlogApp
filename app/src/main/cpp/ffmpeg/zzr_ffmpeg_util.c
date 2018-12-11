@@ -136,12 +136,12 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_
                     goto end;  //end处进行资源释放等善后处理
                 }
                 if (ret >= 0)
-                {   //frame->yuvFrame (YUV420P)
+                {   //frame->yuvFrame (调整缩放)
                     sws_scale(sws_ctx,
                               (const uint8_t* const*)frame->data, frame->linesize, 0, frame->height,
                               yuvFrame->data, yuvFrame->linesize);
                     //向YUV文件保存解码之后的帧数据
-                    //AVFrame->YUV，一个像素包含一个Y
+                    //YUV.AVFrame，一个像素包含一个Y
                     int y_size = frame->width * frame->height;
                     fwrite(yuvFrame->data[0], 1, (size_t) y_size, fp_yuv);
                     fwrite(yuvFrame->data[1], 1, (size_t) y_size/4, fp_yuv);
