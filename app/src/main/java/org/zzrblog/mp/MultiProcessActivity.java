@@ -95,6 +95,9 @@ public class MultiProcessActivity extends Activity {
 
 
 
+    public void clickOnPlay(@SuppressLint("USELESS") View view) {
+
+    }
 
     public void clickOnMultiProcess(@SuppressLint("USELESS") View view) {
         if(mFFmpegAIDLInterface == null) {

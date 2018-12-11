@@ -103,7 +103,7 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_
     // yuv输出文件
     FILE* fp_yuv = fopen(output_yuv_cstr, "wb");
     // 264输出文件
-    FILE* fp_264 = fopen(output_h264_cstr,"ab+");
+    FILE* fp_264 = fopen(output_h264_cstr,"wb");
 
     //用于像素格式转换或者缩放
     struct SwsContext *sws_ctx = sws_getContext(
