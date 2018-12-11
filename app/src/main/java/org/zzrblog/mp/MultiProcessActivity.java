@@ -72,7 +72,9 @@ public class MultiProcessActivity extends Activity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        unbindService(mServiceConnection);
+        if(mFFmpegAIDLInterface!=null) {
+            unbindService(mServiceConnection);
+        }
         unregisterReceiver(logMsgReceiver);
     }
 
@@ -114,26 +116,32 @@ public class MultiProcessActivity extends Activity {
             return;
         }
         String path = Environment.getExternalStorageDirectory().getPath();
-        String input_str = path + "/10s_test.mp4";
-        String output_str = path + "/10s_test.yuv";
-        if(!new File(input_str).exists()){
-            showLogView(input_str+" 文件不存在！");
+        String input_mp4 = path + "/10s_test.mp4";
+        String output_yuv = path + "/10s_test.yuv";
+        String output_h264 = path + "/10s_test.h264";
+        if(!new File(input_mp4).exists()){
+            showLogView(input_mp4+" 文件不存在！");
             Toast.makeText(MultiProcessActivity.this, "找不到测试用例文件！", Toast.LENGTH_SHORT).show();
             return;
         }
-        if(new File(output_str).exists()){
-            showLogView(output_str+" 文件已存在，自动删除。");
-            boolean delete = new File(output_str).delete();
+        if(new File(output_yuv).exists()){
+            showLogView(output_yuv+" 文件已存在，自动删除。");
+            boolean delete = new File(output_yuv).delete();
             if(!delete) return;
         }
-        try {
-            int i = mFFmpegAIDLInterface.Mp4_TO_YUV(input_str, output_str);
-            showLogView("Mp4_TO_YUV return:"+i);
-        } catch (RemoteException e) {
-            e.printStackTrace();
+        if(new File(output_h264).exists()){
+            showLogView(output_h264+" 文件已存在，自动删除。");
+            boolean delete = new File(output_h264).delete();
+            if(!delete) return;
         }
+        //try {
+        //    int i = mFFmpegAIDLInterface.Mp4_TO_YUV(input_str, output_str);
+        //    showLogView("Mp4_TO_YUV return:"+i);
+        //} catch (RemoteException e) {
+        //    e.printStackTrace();
+        //}
 
-        //ZzrFFmpeg.Mp4TOYuv(input_str, output_str);
+        ZzrFFmpeg.Mp4TOYuv(input_mp4, output_yuv, output_h264);
     }
 
 

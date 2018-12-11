@@ -10,7 +10,7 @@ public class ZzrFFmpeg {
 
 
 
-    public static native int Mp4TOYuv(String input_path_str, String output_path_str );
+    public static native int Mp4TOYuv(String input_mp4_str, String output_yuv_str, String output_h264_str );
 
     static
     {

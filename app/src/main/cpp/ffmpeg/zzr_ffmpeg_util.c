@@ -19,14 +19,15 @@ void custom_log(void *ptr, int level, const char* fmt, va_list vl){
 }
 
 JNIEXPORT jint JNICALL
-Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_path_jstr, jstring output_path_jstr) {
+Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_mp4_jstr, jstring output_yuv_jstr, jstring output_h264_jstr) {
 
-    //const char *input_path_cstr = env->GetStringUTFChars(input_path_jstr, 0);
-    //const char *output_path_cstr = env->GetStringUTFChars(output_path_jstr, 0);
-    const char *input_path_cstr = (*env)->GetStringUTFChars(env, input_path_jstr, 0);
-    const char *output_path_cstr = (*env)->GetStringUTFChars(env, output_path_jstr, 0);
-    LOGD("输入文件：%s", input_path_cstr);
-    LOGD("输出文件：%s", output_path_cstr);
+    //const char *input_mp4_cstr = env->GetStringUTFChars(input_mp4_jstr, 0);
+    const char *input_mp4_cstr = (*env)->GetStringUTFChars(env, input_mp4_jstr, 0);
+    const char *output_yuv_cstr = (*env)->GetStringUTFChars(env, output_yuv_jstr, 0);
+    const char *output_h264_cstr = (*env)->GetStringUTFChars(env, output_h264_jstr, 0);
+    LOGD("MP4输入文件：%s", input_mp4_cstr);
+    LOGD("YUV输出文件：%s", output_yuv_cstr);
+    LOGD("h264输出文件：%s", output_h264_cstr);
 
     av_log_set_callback(custom_log);
     // 1.注册组件
@@ -36,7 +37,7 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_
     // 2.获取格式上下文指针，便于打开媒体容器文件获取媒体信息
     AVFormatContext *pFormatContext = avformat_alloc_context();
     // 打开输入视频文件
-    if(avformat_open_input(&pFormatContext, input_path_cstr, NULL, NULL) != 0){
+    if(avformat_open_input(&pFormatContext, input_mp4_cstr, NULL, NULL) != 0){
         LOGE("%s","打开输入视频文件失败");
         return -1;
     }
@@ -100,16 +101,14 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_
                          AV_PIX_FMT_YUV420P, pCodecContext->width, pCodecContext->height, 1 );
 
     // yuv输出文件
-    FILE* fp_yuv = fopen(output_path_cstr,"wb");
-    // test：264输出文件
-    char save264str[100]={0};
-    sprintf(save264str, "%s", "/storage/emulated/0/10s_test.h264");
-    FILE* fp_264 = fopen(save264str,"ab+");
+    FILE* fp_yuv = fopen(output_yuv_cstr, "wb");
+    // 264输出文件
+    FILE* fp_264 = fopen(output_h264_cstr,"ab+");
 
     //用于像素格式转换或者缩放
     struct SwsContext *sws_ctx = sws_getContext(
             pCodecContext->width, pCodecContext->height, pCodecContext->pix_fmt,
-            pCodecContext->width, pCodecContext->height, AV_PIX_FMT_YUV420P, // AV_PIX_FMT_RGB24
+            pCodecContext->width, pCodecContext->height, AV_PIX_FMT_YUV420P,
             SWS_BICUBIC, NULL, NULL, NULL); //SWS_BILINEAR
 
     int ret, frameCount = 0;
@@ -169,10 +168,11 @@ end:
     avformat_close_input(&pFormatContext);
     avformat_free_context(pFormatContext);
 
-    //env->ReleaseStringUTFChars(input_path_jstr, input_path_cstr);
-    //env->ReleaseStringUTFChars(output_path_jstr, output_path_cstr);
-    (*env)->ReleaseStringUTFChars(env, input_path_jstr, input_path_cstr);
-    (*env)->ReleaseStringUTFChars(env, output_path_jstr, output_path_cstr);
+    //env->ReleaseStringUTFChars(input_mp4_jstr, input_mp4_cstr);
+    (*env)->ReleaseStringUTFChars(env, input_mp4_jstr, input_mp4_cstr);
+    (*env)->ReleaseStringUTFChars(env, output_yuv_jstr, output_yuv_cstr);
+    (*env)->ReleaseStringUTFChars(env, output_h264_jstr, output_h264_cstr);
+
     return 0;
 }
 
