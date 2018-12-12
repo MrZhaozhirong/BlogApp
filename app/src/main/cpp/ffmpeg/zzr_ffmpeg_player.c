@@ -57,6 +57,7 @@ Java_org_zzrblog_mp_ZzrFFPlayer_play(JNIEnv *env, jobject jobj)
 {
     const char *input_cstr = (*env)->GetStringUTFChars(env, gInputPath, 0);
 
+
     AVFormatContext *pFormatContext = avformat_alloc_context();
     // 打开输入视频文件
     if(avformat_open_input(&pFormatContext, input_cstr, NULL, NULL) != 0){
@@ -101,7 +102,7 @@ Java_org_zzrblog_mp_ZzrFFPlayer_play(JNIEnv *env, jobject jobj)
 
 
     //编码数据
-    AVPacket *packet = (AVPacket *)av_malloc(sizeof(AVPacket));
+    AVPacket *packet = av_packet_alloc();
     //像素数据（解码数据）
     AVFrame *yuv_frame = av_frame_alloc();
     AVFrame *rgb_frame = av_frame_alloc();
@@ -139,11 +140,12 @@ Java_org_zzrblog_mp_ZzrFFPlayer_play(JNIEnv *env, jobject jobj)
                     LOGW("avcodec_receive_frame：%d\n", AVERROR(ret));
                     goto end;  //end处进行资源释放等善后处理
                 }
+
                 if (ret >= 0)
                 {
                     ANativeWindow_lock(nativeWindow, &outBuffer, NULL);
                     av_image_fill_arrays(rgb_frame->data, rgb_frame->linesize, outBuffer.bits,
-                                         AV_PIX_FMT_YUV420P, pCodecContext->width, pCodecContext->height, 1 );
+                                         AV_PIX_FMT_RGBA, pCodecContext->width, pCodecContext->height, 1 );
 
                     I420ToARGB(yuv_frame->data[0],yuv_frame->linesize[0],
                                yuv_frame->data[2],yuv_frame->linesize[2],
@@ -153,7 +155,7 @@ Java_org_zzrblog_mp_ZzrFFPlayer_play(JNIEnv *env, jobject jobj)
 
                     ANativeWindow_unlockAndPost(nativeWindow);
 
-                    usleep(1000 * 16);
+                    usleep(100 * 16);
                 }
             }
         }

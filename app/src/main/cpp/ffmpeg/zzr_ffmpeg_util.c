@@ -105,7 +105,7 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_
     // 264输出文件
     FILE* fp_264 = fopen(output_h264_cstr,"wb");
 
-    //用于像素格式转换或者缩放
+    //用于尺寸缩放
     struct SwsContext *sws_ctx = sws_getContext(
             pCodecContext->width, pCodecContext->height, pCodecContext->pix_fmt,
             pCodecContext->width, pCodecContext->height, AV_PIX_FMT_YUV420P,
