@@ -9,13 +9,15 @@ import android.view.Surface;
 public class ZzrFFPlayer {
 
     public native void init(String input_str,Surface surface);
-    public native void play();
+    public native int play();
     public native void release();
 
     static
     {
         // Try loading libraries...
         try {
+            System.loadLibrary("yuv");
+
             System.loadLibrary("avutil");
             System.loadLibrary("swscale");
             System.loadLibrary("swresample");

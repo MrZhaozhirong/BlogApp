@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.4.1)
 # 设置生成的so动态库最后输出的路径
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/src/main/jniLibs/${ANDROID_ABI})
 
-# 在系统找出预编译的log-lib库，指定在CMake脚本下的别名为log
+# 在系统找出预编译的log库，指定在CMake脚本下的别名为log-lib
 find_library( log-lib log )
 
 # 为log_common.h 指定平台
@@ -130,3 +130,40 @@ target_link_libraries( # 指定目标链接库
                        avcodec
                        avformat
                        swscale )
+
+
+
+
+
+
+
+
+
+
+
+# 在系统找出预编译的android库，指定在CMake脚本下的别名为android-lib
+# android参数 for native windows
+find_library( android-lib android )
+
+add_library(yuv SHARED IMPORTED )
+set_target_properties(yuv PROPERTIES IMPORTED_LOCATION
+            ${PROJECT_SOURCE_DIR}/src/main/cpp/libyuv/libyuv.so)
+set_target_properties(yuv PROPERTIES LINKER_LANGUAGE CXX)
+
+add_library( # 生成动态库的名称
+             zzr-ffmpeg-player
+             # 指定是动态库SO
+             SHARED
+             # 编译库的源代码文件
+             src/main/cpp/ffmpeg/zzr_ffmpeg_player.c)
+
+target_link_libraries( # 指定目标链接库
+                       zzr-ffmpeg-player
+                       # 添加预编译库到目标链接库中
+                       ${log-lib}
+                       ${android-lib}
+                       avutil
+                       avcodec
+                       avformat
+                       swscale
+                       yuv )

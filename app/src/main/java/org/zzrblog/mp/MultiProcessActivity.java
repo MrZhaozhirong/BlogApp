@@ -8,11 +8,13 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.graphics.PixelFormat;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.text.method.ScrollingMovementMethod;
+import android.view.SurfaceView;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -45,11 +47,16 @@ public class MultiProcessActivity extends Activity {
     StatusReceiver logMsgReceiver = new StatusReceiver();
 
     private TextView logView;
+    private SurfaceView surfaceView;
+    private ZzrFFPlayer ffPlayer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_mp_enter);
+
+        surfaceView = findViewById(R.id.surface_view);
+        surfaceView.getHolder().setFormat(PixelFormat.RGBA_8888);
 
         logView = findViewById(R.id.logView);
         logView.setMovementMethod(ScrollingMovementMethod.getInstance());
@@ -76,7 +83,29 @@ public class MultiProcessActivity extends Activity {
             unbindService(mServiceConnection);
         }
         unregisterReceiver(logMsgReceiver);
+
+        if(ffPlayer!=null)  ffPlayer.release();
     }
+
+
+
+
+
+    public void clickOnPlay(@SuppressLint("USELESS") View view) {
+        String path = Environment.getExternalStorageDirectory().getPath();
+        String input_mp4 = path + "/10s_test.mp4";
+        if(ffPlayer==null) {
+            ffPlayer = new ZzrFFPlayer();
+            ffPlayer.init(input_mp4,surfaceView.getHolder().getSurface());
+        } else {
+            ffPlayer.play();
+        }
+    }
+
+
+
+
+
 
 
     private IFFmpegAIDLInterface mFFmpegAIDLInterface;
@@ -92,12 +121,6 @@ public class MultiProcessActivity extends Activity {
             mFFmpegAIDLInterface = null;
         }
     };
-
-
-
-    public void clickOnPlay(@SuppressLint("USELESS") View view) {
-
-    }
 
     public void clickOnMultiProcess(@SuppressLint("USELESS") View view) {
         if(mFFmpegAIDLInterface == null) {
@@ -137,14 +160,12 @@ public class MultiProcessActivity extends Activity {
             boolean delete = new File(output_h264).delete();
             if(!delete) return;
         }
-        //try {
-        //    int i = mFFmpegAIDLInterface.Mp4_TO_YUV(input_str, output_str);
-        //    showLogView("Mp4_TO_YUV return:"+i);
-        //} catch (RemoteException e) {
-        //    e.printStackTrace();
-        //}
-
-        ZzrFFmpeg.Mp4TOYuv(input_mp4, output_yuv, output_h264);
+        try {
+            int i = mFFmpegAIDLInterface.Mp4_TO_YUV(input_mp4, output_yuv, output_h264);
+            showLogView("Mp4_TO_YUV return:"+i);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
     }
 
 
