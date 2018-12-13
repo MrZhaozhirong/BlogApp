@@ -27,8 +27,8 @@ JNIEXPORT void JNICALL
 Java_org_zzrblog_mp_ZzrFFPlayer_init(JNIEnv *env, jobject jobj, jstring input_jstr, jobject surface)
 {
     gJNIEnv = env;
-    gInputPath = (jstring) (*env)->NewGlobalRef(env, input_jstr); //创建输入的媒体资源的全局引用。
-    gSurface = (*env)->NewGlobalRef(env, surface); //创建surface全局引用。
+    gInputPath = (jstring) (*gJNIEnv)->NewGlobalRef(gJNIEnv, input_jstr); //创建输入的媒体资源的全局引用。
+    gSurface = (*gJNIEnv)->NewGlobalRef(gJNIEnv, surface); //创建surface全局引用。
 
     // 0.FFmpeg's av_log output
     av_log_set_callback(custom_log);
@@ -43,8 +43,8 @@ Java_org_zzrblog_mp_ZzrFFPlayer_release(JNIEnv *env, jobject jobj)
 {
     if(gJNIEnv!=NULL)
     {
-        (*gJNIEnv)->DeleteGlobalRef(env, gInputPath);
-        (*gJNIEnv)->DeleteGlobalRef(env, gSurface);
+        (*gJNIEnv)->DeleteGlobalRef(gJNIEnv, gInputPath);
+        (*gJNIEnv)->DeleteGlobalRef(gJNIEnv, gSurface);
     }
     gJNIEnv = NULL;
 }
@@ -114,11 +114,11 @@ Java_org_zzrblog_mp_ZzrFFPlayer_play(JNIEnv *env, jobject jobj)
             SWS_BILINEAR, NULL, NULL, NULL);
 
     // 准备native绘制的窗体
-    ANativeWindow* nativeWindow = ANativeWindow_fromSurface(env,gSurface);
+    ANativeWindow* nativeWindow = ANativeWindow_fromSurface(gJNIEnv, gSurface);
     // 设置缓冲区的属性（宽、高、像素格式）
     ANativeWindow_setBuffersGeometry(nativeWindow, pCodecContext->width, pCodecContext->height, WINDOW_FORMAT_RGBA_8888);
     // 绘制时的缓冲区
-    ANativeWindow_Buffer outBuffer;
+    ANativeWindow_Buffer nativeWinBuffer;
 
     int ret;
     while(av_read_frame(pFormatContext, packet) >= 0)
@@ -143,18 +143,22 @@ Java_org_zzrblog_mp_ZzrFFPlayer_play(JNIEnv *env, jobject jobj)
 
                 if (ret >= 0)
                 {
-                    ANativeWindow_lock(nativeWindow, &outBuffer, NULL);
-                    av_image_fill_arrays(rgb_frame->data, rgb_frame->linesize, outBuffer.bits,
-                                         AV_PIX_FMT_RGBA, pCodecContext->width, pCodecContext->height, 1 );
+                    ANativeWindow_lock(nativeWindow, &nativeWinBuffer, NULL);
+                    // 上锁并关联 ANativeWindow + ANativeWindow_Buffer
 
-                    I420ToARGB(yuv_frame->data[0],yuv_frame->linesize[0],
-                               yuv_frame->data[2],yuv_frame->linesize[2],
-                               yuv_frame->data[1],yuv_frame->linesize[1],
+                    av_image_fill_arrays(rgb_frame->data, rgb_frame->linesize, nativeWinBuffer.bits,
+                                         AV_PIX_FMT_RGBA, pCodecContext->width, pCodecContext->height, 1 );
+                    // rgb.AVFrame对象 关联 ANativeWindow_Buffer的真实内存空间actual bits.
+
+                    I420ToARGB(yuv_frame->data[0], yuv_frame->linesize[0],
+                               yuv_frame->data[2], yuv_frame->linesize[2],
+                               yuv_frame->data[1], yuv_frame->linesize[1],
                                rgb_frame->data[0], rgb_frame->linesize[0],
                                pCodecContext->width, pCodecContext->height);
+                    // yuv.AVFrame 转 rgb.AVFrame
 
                     ANativeWindow_unlockAndPost(nativeWindow);
-
+                    // 释放锁并 swap交换显示内存到屏幕上。
                     usleep(100 * 16);
                 }
             }
@@ -170,7 +174,7 @@ end:
     avcodec_free_context(&pCodecContext);
     avformat_close_input(&pFormatContext);
     avformat_free_context(pFormatContext);
-    (*env)->ReleaseStringUTFChars(env, gInputPath, input_cstr);
+    (*gJNIEnv)->ReleaseStringUTFChars(gJNIEnv, gInputPath, input_cstr);
     return 0;
 }
 
