@@ -93,9 +93,8 @@ public class MultiProcessActivity extends Activity {
         if(ffPlayer==null) {
             ffPlayer = new ZzrFFPlayer();
             ffPlayer.init(input_mp4,surfaceView.getHolder().getSurface());
-        } else {
-            ffPlayer.play();
         }
+        ffPlayer.play();
     }
 
 
