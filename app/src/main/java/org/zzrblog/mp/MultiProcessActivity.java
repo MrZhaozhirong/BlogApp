@@ -87,10 +87,6 @@ public class MultiProcessActivity extends Activity {
         if(ffPlayer!=null)  ffPlayer.release();
     }
 
-
-
-
-
     public void clickOnPlay(@SuppressLint("USELESS") View view) {
         String path = Environment.getExternalStorageDirectory().getPath();
         String input_mp4 = path + "/10s_test.mp4";
@@ -133,14 +129,15 @@ public class MultiProcessActivity extends Activity {
                 e.printStackTrace();
             }
         }
+
+        //if(mFFmpegAIDLInterface==null) {
+        //    showLogView("先启动多进程-AIDL,谢谢！");
+        //    Toast.makeText(MultiProcessActivity.this, "先启动多进程-AIDL,谢谢！", Toast.LENGTH_SHORT).show();
+        //    return;
+        //}
     }
 
-    public void clickOnMultiProcess_MP42YUV(View view) {
-        if(mFFmpegAIDLInterface==null) {
-            showLogView("先启动多进程-AIDL,谢谢！");
-            Toast.makeText(MultiProcessActivity.this, "先启动多进程-AIDL,谢谢！", Toast.LENGTH_SHORT).show();
-            return;
-        }
+    public void clickOnMP42YUV(View view) {
         String path = Environment.getExternalStorageDirectory().getPath();
         String input_mp4 = path + "/10s_test.mp4";
         String output_yuv = path + "/10s_test.yuv";
@@ -161,9 +158,10 @@ public class MultiProcessActivity extends Activity {
             if(!delete) return;
         }
         try {
-            int i = mFFmpegAIDLInterface.Mp4_TO_YUV(input_mp4, output_yuv, output_h264);
+            //int i = mFFmpegAIDLInterface.Mp4_TO_YUV(input_mp4, output_yuv, output_h264);
+            final int i = ZzrFFmpeg.Mp4TOYuv(input_mp4, output_yuv, output_h264);
             showLogView("Mp4_TO_YUV return:"+i);
-        } catch (RemoteException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
