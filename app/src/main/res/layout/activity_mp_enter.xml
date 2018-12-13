@@ -21,17 +21,20 @@
                 android:layout_height="wrap_content"
                 android:text="多进程-启动AIDL"
                 android:onClick="clickOnMultiProcess"/>
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="MP4转YUV"
+                android:onClick="clickOnMP42YUV"/>
             <Button
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="播放"
                 android:onClick="clickOnPlay"/>
-            <Button
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="多进程-MP4转YUV"
-                android:onClick="clickOnMultiProcess_MP42YUV"
-                android:visibility="gone"/>
         </LinearLayout>
 
 
