@@ -8,7 +8,7 @@ import android.view.Surface;
 
 public class ZzrFFPlayer {
 
-    public native void init(String input_str,Surface surface);
+    public native void init(String media_input_str,Surface surface);
     public native int play();
     public native void release();
 
