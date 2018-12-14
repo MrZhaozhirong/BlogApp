@@ -8,7 +8,7 @@ import android.util.Log;
 
 public class ZzrFFmpeg {
 
-
+    public static native void Mp3TOPcm(String input_mp3_str, String output_pcm_str);
 
     public static native int Mp4TOYuv(String input_mp4_str, String output_yuv_str, String output_h264_str );
 

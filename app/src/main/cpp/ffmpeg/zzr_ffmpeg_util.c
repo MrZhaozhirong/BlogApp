@@ -10,7 +10,7 @@
 
 //Output FFmpeg's av_log()
 void custom_log(void *ptr, int level, const char* fmt, va_list vl){
-    FILE *fp=fopen("/storage/emulated/0/av_log.txt","a+");
+    FILE *fp=fopen("/storage/emulated/0/av_log.txt","w+");
     if(fp){
         vfprintf(fp,fmt,vl);
         fflush(fp);
@@ -177,3 +177,55 @@ end:
 }
 
 
+JNIEXPORT void JNICALL
+Java_org_zzrblog_mp_ZzrFFmpeg_Mp3TOPcm(JNIEnv *env, jclass clazz, jstring input_mp3_jstr, jstring output_pcm_jstr) {
+    const char *input_mp3_cstr = (*env)->GetStringUTFChars(env, input_mp3_jstr, 0);
+    const char *output_pcm_cstr = (*env)->GetStringUTFChars(env, output_pcm_jstr, 0);
+
+    av_log_set_callback(custom_log);
+    // 注册组件
+    av_register_all();
+    avcodec_register_all();
+    avformat_network_init();
+
+    AVFormatContext *pFormatContext = avformat_alloc_context();
+    if(avformat_open_input(&pFormatContext, input_mp3_cstr,NULL,NULL) != 0){
+        LOGE("%s","打开输入视频文件失败");
+        return ;
+    }
+    if(avformat_find_stream_info(pFormatContext, NULL) < 0){
+        LOGE("%s","获取视频信息失败");
+        return ;
+    }
+    int audio_stream_idx = -1;
+    for(int i=0; i<pFormatContext->nb_streams; i++)
+    {
+        if(pFormatContext->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
+            audio_stream_idx = i;
+            break;
+        }
+    }
+    AVCodec *pCodec = avcodec_find_decoder(pFormatContext->streams[audio_stream_idx]->codecpar->codec_id);
+    if(pCodec == NULL){
+        LOGI("%s","无法获取解码器");
+        return ;
+    }
+    AVCodecContext * pCodecContext = avcodec_alloc_context3(pCodec);
+    if(pCodecContext == NULL) {
+        LOGE("%s","创建解码器对应的上下文失败.");
+        return ;
+    }
+    avcodec_parameters_to_context(pCodecContext, pFormatContext->streams[audio_stream_idx]->codecpar);
+    if(avcodec_open2(pCodecContext, pCodec, NULL) < 0) {
+        LOGE("%s","解码器无法打开");
+        return ;
+    }
+
+
+
+
+
+    (*env)->ReleaseStringUTFChars(env, input_mp3_jstr, input_mp3_cstr);
+    (*env)->ReleaseStringUTFChars(env, output_pcm_jstr, output_pcm_cstr);
+    return 0;
+}
