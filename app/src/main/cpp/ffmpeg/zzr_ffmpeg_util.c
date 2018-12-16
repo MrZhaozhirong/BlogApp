@@ -235,7 +235,7 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp3TOPcm(JNIEnv *env, jclass clazz, jstring input_
     AVFrame *frame = av_frame_alloc();
     //frame->16bit双声道 采样率44100 PCM采样格式
     SwrContext *swrCtx = swr_alloc();
-    //重设置采样参数-------------start
+    //  设置采样参数-------------start
     //输入的采样格式
     enum AVSampleFormat in_sample_fmt = pCodecContext->sample_fmt;
     //输出采样格式16bit PCM
@@ -248,7 +248,7 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp3TOPcm(JNIEnv *env, jclass clazz, jstring input_
     uint64_t in_ch_layout = pCodecContext->channel_layout;
     //输出的声道布局（立体声）
     uint64_t out_ch_layout = AV_CH_LAYOUT_STEREO;
-    //重设置采样参数---------------end
+    //  设置采样参数---------------end
     swr_alloc_set_opts(swrCtx,
                        out_ch_layout,out_sample_fmt,out_sample_rate,
                        in_ch_layout,in_sample_fmt,in_sample_rate,
@@ -258,7 +258,7 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp3TOPcm(JNIEnv *env, jclass clazz, jstring input_
 
     //16bit 44100 PCM 数据
     uint8_t *out_buffer = (uint8_t *)av_malloc(MAX_AUDIO_FARME_SIZE);
-    //根据声道个数 获取 默认的声道布局（2个声道，默认立体声stereo）
+    //根据声道个数 获取 匹配的声道布局（2个声道，立体声stereo）
     //av_get_default_channel_layout(codecCtx->channels);
     //根据声道布局 获取 输出的声道个数
     int out_channel_nb = av_get_channel_layout_nb_channels(out_ch_layout);
