@@ -7,6 +7,7 @@
 #include "include/libavformat/avformat.h"
 #include "include/libavutil/imgutils.h"
 #include "include/libswscale/swscale.h"
+#include "include/libswresample/swresample.h"
 
 //Output FFmpeg's av_log()
 void custom_log(void *ptr, int level, const char* fmt, va_list vl){
@@ -177,6 +178,12 @@ end:
 }
 
 
+
+
+
+
+#define MAX_AUDIO_FARME_SIZE 48000 * 2
+
 JNIEXPORT void JNICALL
 Java_org_zzrblog_mp_ZzrFFmpeg_Mp3TOPcm(JNIEnv *env, jclass clazz, jstring input_mp3_jstr, jstring output_pcm_jstr) {
     const char *input_mp3_cstr = (*env)->GetStringUTFChars(env, input_mp3_jstr, 0);
@@ -223,9 +230,81 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp3TOPcm(JNIEnv *env, jclass clazz, jstring input_
 
 
 
+    //开始解码
+    AVPacket *packet = av_packet_alloc();
+    AVFrame *frame = av_frame_alloc();
+    //frame->16bit双声道 采样率44100 PCM采样格式
+    SwrContext *swrCtx = swr_alloc();
+    //重设置采样参数-------------start
+    //输入的采样格式
+    enum AVSampleFormat in_sample_fmt = pCodecContext->sample_fmt;
+    //输出采样格式16bit PCM
+    enum AVSampleFormat out_sample_fmt = AV_SAMPLE_FMT_S16;
+    //输入采样率
+    int in_sample_rate = pCodecContext->sample_rate;
+    //输出采样率
+    int out_sample_rate = 44100;
+    //输入的声道布局
+    uint64_t in_ch_layout = pCodecContext->channel_layout;
+    //输出的声道布局（立体声）
+    uint64_t out_ch_layout = AV_CH_LAYOUT_STEREO;
+    //重设置采样参数---------------end
+    swr_alloc_set_opts(swrCtx,
+                       out_ch_layout,out_sample_fmt,out_sample_rate,
+                       in_ch_layout,in_sample_fmt,in_sample_rate,
+                       0, NULL);
+    swr_init(swrCtx);
 
+
+    //16bit 44100 PCM 数据
+    uint8_t *out_buffer = (uint8_t *)av_malloc(MAX_AUDIO_FARME_SIZE);
+    //根据声道个数 获取 默认的声道布局（2个声道，默认立体声stereo）
+    //av_get_default_channel_layout(codecCtx->channels);
+    //根据声道布局 获取 输出的声道个数
+    int out_channel_nb = av_get_channel_layout_nb_channels(out_ch_layout);
+
+    FILE *fp_pcm = fopen(output_pcm_cstr,"wb");
+    int ret;
+    while(av_read_frame(pFormatContext, packet) >= 0)
+    {
+        if(packet->stream_index == audio_stream_idx)
+        {
+            ret = avcodec_send_packet(pCodecContext, packet);
+            if(ret < 0){
+                LOGE("avcodec_send_packet：%d\n", ret);
+                continue;
+            }
+            while(ret >= 0) {
+                ret = avcodec_receive_frame(pCodecContext, frame);
+                if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
+                    LOGD("avcodec_receive_frame：%d\n", ret);
+                    break;
+                } else if (ret < 0) {
+                    LOGW("avcodec_receive_frame：%d\n", AVERROR(ret));
+                    goto end;  //end处进行资源释放等善后处理
+                }
+
+                if (ret >= 0)
+                {
+                    swr_convert(swrCtx, &out_buffer, MAX_AUDIO_FARME_SIZE, (const uint8_t **) frame->data, frame->nb_samples);
+                    //获取sample的size
+                    int out_buffer_size = av_samples_get_buffer_size(NULL, out_channel_nb,
+                                                                     frame->nb_samples, out_sample_fmt, 1);
+                    fwrite(out_buffer, 1, (size_t) out_buffer_size, fp_pcm);
+                }
+            }
+        }
+        av_packet_unref(packet);
+    }
+
+
+
+end:
+    fclose(fp_pcm);
+    av_frame_free(&frame);
+    av_free(out_buffer);
+    swr_free(&swrCtx);
 
     (*env)->ReleaseStringUTFChars(env, input_mp3_jstr, input_mp3_cstr);
     (*env)->ReleaseStringUTFChars(env, output_pcm_jstr, output_pcm_cstr);
-    return 0;
 }
