@@ -177,9 +177,9 @@ end:
 
 #define MAX_AUDIO_FARME_SIZE 48000 * 2
 
-JNIEXPORT void JNICALL
-Java_org_zzrblog_mp_ZzrFFmpeg_Mp34TOPcm(JNIEnv *env, jclass clazz, jstring input_mp3_jstr, jstring output_pcm_jstr) {
-    const char *input_mp3_cstr = (*env)->GetStringUTFChars(env, input_mp3_jstr, 0);
+JNIEXPORT jint JNICALL
+Java_org_zzrblog_mp_ZzrFFmpeg_Mp34TOPcm(JNIEnv *env, jclass clazz, jstring input_media_jstr, jstring output_pcm_jstr) {
+    const char *input_media_cstr = (*env)->GetStringUTFChars(env, input_media_jstr, 0);
     const char *output_pcm_cstr = (*env)->GetStringUTFChars(env, output_pcm_jstr, 0);
 
     av_log_set_callback(custom_log);
@@ -189,13 +189,13 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp34TOPcm(JNIEnv *env, jclass clazz, jstring input
     avformat_network_init();
 
     AVFormatContext *pFormatContext = avformat_alloc_context();
-    if(avformat_open_input(&pFormatContext, input_mp3_cstr,NULL,NULL) != 0){
+    if(avformat_open_input(&pFormatContext, input_media_cstr,NULL,NULL) != 0){
         LOGE("%s","打开输入视频文件失败");
-        return ;
+        return -1;
     }
     if(avformat_find_stream_info(pFormatContext, NULL) < 0){
-        LOGE("%s","获取视频信息失败");
-        return ;
+        LOGE("%s","获取媒体信息失败");
+        return -2;
     }
     int audio_stream_idx = -1;
     for(int i=0; i<pFormatContext->nb_streams; i++)
@@ -208,17 +208,17 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp34TOPcm(JNIEnv *env, jclass clazz, jstring input
     AVCodec *pCodec = avcodec_find_decoder(pFormatContext->streams[audio_stream_idx]->codecpar->codec_id);
     if(pCodec == NULL){
         LOGI("%s","无法获取解码器");
-        return ;
+        return -3;
     }
     AVCodecContext * pCodecContext = avcodec_alloc_context3(pCodec);
     if(pCodecContext == NULL) {
         LOGE("%s","创建解码器对应的上下文失败.");
-        return ;
+        return -4;
     }
     avcodec_parameters_to_context(pCodecContext, pFormatContext->streams[audio_stream_idx]->codecpar);
     if(avcodec_open2(pCodecContext, pCodec, NULL) < 0) {
         LOGE("%s","解码器无法打开");
-        return ;
+        return -5;
     }
 
 
@@ -249,10 +249,10 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp34TOPcm(JNIEnv *env, jclass clazz, jstring input
     swr_init(swrCtx);
 
 
-    //16bit 44100 PCM 数据
+    //16bit 44100 PCM 数据 内存空间。
     uint8_t *out_buffer = (uint8_t *)av_malloc(MAX_AUDIO_FARME_SIZE);
-    //根据声道个数 获取 匹配的声道布局（2个声道，立体声stereo）
-    //av_get_default_channel_layout(codecCtx->channels);
+    //根据声道个数 获取 匹配的声道布局（双声道->立体声stereo）
+    //av_get_default_channel_layout(pCodecContext->channels);
     //根据声道布局 获取 输出的声道个数
     int out_channel_nb = av_get_channel_layout_nb_channels(out_ch_layout);
 
@@ -298,8 +298,9 @@ end:
     av_free(out_buffer);
     swr_free(&swrCtx);
 
-    (*env)->ReleaseStringUTFChars(env, input_mp3_jstr, input_mp3_cstr);
+    (*env)->ReleaseStringUTFChars(env, input_media_jstr, input_media_cstr);
     (*env)->ReleaseStringUTFChars(env, output_pcm_jstr, output_pcm_cstr);
+    return 0;
 }
 
 
