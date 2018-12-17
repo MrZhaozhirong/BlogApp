@@ -140,7 +140,6 @@ public class MultiProcessActivity extends Activity {
         String path = Environment.getExternalStorageDirectory().getPath();
         String input_mp4 = path + "/10s_test.mp4";
         String output_yuv = path + "/10s_test.yuv";
-        String output_h264 = path + "/10s_test.h264";
         if(!new File(input_mp4).exists()){
             showLogView(input_mp4+" 文件不存在！");
             Toast.makeText(MultiProcessActivity.this, "找不到测试用例文件！", Toast.LENGTH_SHORT).show();
@@ -151,19 +150,33 @@ public class MultiProcessActivity extends Activity {
             boolean delete = new File(output_yuv).delete();
             if(!delete) return;
         }
-        if(new File(output_h264).exists()){
-            showLogView(output_h264+" 文件已存在，自动删除。");
-            boolean delete = new File(output_h264).delete();
-            if(!delete) return;
-        }
         try {
             //int i = mFFmpegAIDLInterface.Mp4_TO_YUV(input_mp4, output_yuv, output_h264);
-            final int i = ZzrFFmpeg.Mp4TOYuv(input_mp4, output_yuv, output_h264);
+            final int i = ZzrFFmpeg.Mp4TOYuv(input_mp4, output_yuv);
             showLogView("Mp4_TO_YUV return:"+i);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-
+    public void clickOnMP42PCM(View view) {
+        String path = Environment.getExternalStorageDirectory().getPath();
+        String input_mp4 = path + "/10s_test.mp4";
+        String output_pcm = path + "/10s_test.pcm";
+        if(!new File(input_mp4).exists()){
+            showLogView(input_mp4+" 文件不存在！");
+            Toast.makeText(MultiProcessActivity.this, "找不到测试用例文件！", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if(new File(output_pcm).exists()){
+            showLogView(output_pcm+" 文件已存在，自动删除。");
+            boolean delete = new File(output_pcm).delete();
+            if(!delete) return;
+        }
+        try {
+            ZzrFFmpeg.Mp34TOPcm(input_mp4, output_pcm);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 }

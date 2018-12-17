@@ -63,11 +63,11 @@ public class FFmpegAIDLService extends Service {
             return name + "::IFFmpegAIDLInterface.Impl";
         }
 
-        @Override
-        public int Mp4_TO_YUV(String input_mp4_str, String output_yuv_str, String output_h264_str) throws RemoteException {
-            sendDebugMsg(name+" begin Mp4_TO_YUV");
-            return ZzrFFmpeg.Mp4TOYuv(input_mp4_str, output_yuv_str, output_h264_str);
-        }
+        //@Override
+        //public int Mp4_TO_YUV(String input_mp4_str, String output_yuv_str, String output_h264_str) throws RemoteException {
+        //    sendDebugMsg(name+" begin Mp4_TO_YUV");
+        //    return ZzrFFmpeg.Mp4TOYuv(input_mp4_str, output_yuv_str, output_h264_str);
+        //}
 
     }
 }

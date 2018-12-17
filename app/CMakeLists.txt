@@ -129,7 +129,8 @@ target_link_libraries( # 指定目标链接库
                        avutil
                        avcodec
                        avformat
-                       swscale )
+                       swscale
+                       swresample )
 
 
 

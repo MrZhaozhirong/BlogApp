@@ -14,6 +14,4 @@ interface IFFmpegAIDLInterface {
             double aDouble, String aString);
 
     String getName();
-
-    int Mp4_TO_YUV(String input_mp4_str, String output_yuv_str, String output_h264_str);
 }

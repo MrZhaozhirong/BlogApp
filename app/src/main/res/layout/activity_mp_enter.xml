@@ -28,8 +28,13 @@
             <Button
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="MP4转YUV"
+                android:text="MP4分YUV"
                 android:onClick="clickOnMP42YUV"/>
+            <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="MP4转PCM"
+                android:onClick="clickOnMP42PCM"/>
             <Button
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

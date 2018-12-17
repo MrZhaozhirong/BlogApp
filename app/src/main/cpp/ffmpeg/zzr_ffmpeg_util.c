@@ -20,15 +20,14 @@ void custom_log(void *ptr, int level, const char* fmt, va_list vl){
 }
 
 JNIEXPORT jint JNICALL
-Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_mp4_jstr, jstring output_yuv_jstr, jstring output_h264_jstr) {
+Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz,
+                                       jstring input_mp4_jstr, jstring output_yuv_jstr) {
 
     //const char *input_mp4_cstr = env->GetStringUTFChars(input_mp4_jstr, 0);
     const char *input_mp4_cstr = (*env)->GetStringUTFChars(env, input_mp4_jstr, 0);
     const char *output_yuv_cstr = (*env)->GetStringUTFChars(env, output_yuv_jstr, 0);
-    const char *output_h264_cstr = (*env)->GetStringUTFChars(env, output_h264_jstr, 0);
     LOGD("MP4输入文件：%s", input_mp4_cstr);
     LOGD("YUV输出文件：%s", output_yuv_cstr);
-    LOGD("h264输出文件：%s", output_h264_cstr);
 
     av_log_set_callback(custom_log);
     // 1.注册组件
@@ -82,7 +81,7 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_
         LOGE("%s","解码器无法打开");
         return -5;
     } else {
-        LOGI("设置解码器解码格式pix_fmt：%d", pCodecContext->pix_fmt);
+        LOGI("解码器解码视频格式：%d", pCodecContext->pix_fmt);
     }
 
 
@@ -94,7 +93,7 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_
     AVFrame *frame = av_frame_alloc();
     AVFrame *yuvFrame = av_frame_alloc();
 
-        // 为yuvFrame缓冲区分配内存，只有指定了AVFrame的像素格式、画面大小才能真正分配内存
+    // 为yuvFrame缓冲区分配内存，只有指定了AVFrame的像素格式、画面大小才能真正分配内存
     int buffer_size = av_image_get_buffer_size(AV_PIX_FMT_YUV420P, pCodecContext->width, pCodecContext->height, 1);
     uint8_t *out_buffer = (uint8_t *)av_malloc((size_t) buffer_size);
     // 初始化yuvFrame缓冲区
@@ -103,8 +102,6 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_
 
     // yuv输出文件
     FILE* fp_yuv = fopen(output_yuv_cstr, "wb");
-    // 264输出文件
-    FILE* fp_264 = fopen(output_h264_cstr,"wb");
 
     //用于尺寸缩放
     struct SwsContext *sws_ctx = sws_getContext(
@@ -118,8 +115,6 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_
     {
         if(packet->stream_index == video_stream_idx)
         {
-            // test：h264数据写入本地文件
-            fwrite(packet->data, 1, (size_t) packet->size, fp_264);
             //AVPacket->AVFrame
             ret = avcodec_send_packet(pCodecContext, packet);
             if(ret < 0){
@@ -158,7 +153,6 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz, jstring input_
 end:
     // 结束回收工作
     fclose(fp_yuv);
-    fclose(fp_264);
 
     sws_freeContext(sws_ctx);
     av_free(out_buffer);
@@ -172,7 +166,6 @@ end:
     //env->ReleaseStringUTFChars(input_mp4_jstr, input_mp4_cstr);
     (*env)->ReleaseStringUTFChars(env, input_mp4_jstr, input_mp4_cstr);
     (*env)->ReleaseStringUTFChars(env, output_yuv_jstr, output_yuv_cstr);
-    (*env)->ReleaseStringUTFChars(env, output_h264_jstr, output_h264_cstr);
 
     return 0;
 }
@@ -185,7 +178,7 @@ end:
 #define MAX_AUDIO_FARME_SIZE 48000 * 2
 
 JNIEXPORT void JNICALL
-Java_org_zzrblog_mp_ZzrFFmpeg_Mp3TOPcm(JNIEnv *env, jclass clazz, jstring input_mp3_jstr, jstring output_pcm_jstr) {
+Java_org_zzrblog_mp_ZzrFFmpeg_Mp34TOPcm(JNIEnv *env, jclass clazz, jstring input_mp3_jstr, jstring output_pcm_jstr) {
     const char *input_mp3_cstr = (*env)->GetStringUTFChars(env, input_mp3_jstr, 0);
     const char *output_pcm_cstr = (*env)->GetStringUTFChars(env, output_pcm_jstr, 0);
 
@@ -270,7 +263,7 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp3TOPcm(JNIEnv *env, jclass clazz, jstring input_
         if(packet->stream_index == audio_stream_idx)
         {
             ret = avcodec_send_packet(pCodecContext, packet);
-            if(ret < 0){
+            if(ret < 0) {
                 LOGE("avcodec_send_packet：%d\n", ret);
                 continue;
             }
@@ -296,7 +289,7 @@ Java_org_zzrblog_mp_ZzrFFmpeg_Mp3TOPcm(JNIEnv *env, jclass clazz, jstring input_
         }
         av_packet_unref(packet);
     }
-
+    LOGD("媒体文件转换PCM结束\n");
 
 
 end:
@@ -308,3 +301,7 @@ end:
     (*env)->ReleaseStringUTFChars(env, input_mp3_jstr, input_mp3_cstr);
     (*env)->ReleaseStringUTFChars(env, output_pcm_jstr, output_pcm_cstr);
 }
+
+
+
+
