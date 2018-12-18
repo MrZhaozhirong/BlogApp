@@ -1,5 +1,8 @@
 package org.zzrblog.mp;
 
+import android.media.AudioFormat;
+import android.media.AudioManager;
+import android.media.AudioTrack;
 import android.view.Surface;
 
 /**
@@ -11,6 +14,39 @@ public class ZzrFFPlayer {
     public native void init(String media_input_str,Surface surface);
     public native int play();
     public native void release();
+
+    public native int musicPlay(String media_input_str);
+
+    /**
+     * 创建一个AudioTrac对象，用于播放
+     * @param sampleRateInHz 采样率
+     * @param nb_channels 声道数
+     * @return AudioTrack_obj
+     */
+    public AudioTrack createAudioTrack(int sampleRateInHz, int nb_channels){
+        //固定格式的音频码流
+        int audioFormat = AudioFormat.ENCODING_PCM_16BIT;
+        //声道布局
+        int channelConfig;
+        if(nb_channels == 1){
+            channelConfig = android.media.AudioFormat.CHANNEL_OUT_MONO;
+        } else {
+            channelConfig = android.media.AudioFormat.CHANNEL_OUT_STEREO;
+        }
+
+        int bufferSizeInBytes = AudioTrack.getMinBufferSize(sampleRateInHz, channelConfig, audioFormat);
+
+        AudioTrack audioTrack = new AudioTrack(
+                AudioManager.STREAM_MUSIC,
+                sampleRateInHz, channelConfig,
+                audioFormat,
+                bufferSizeInBytes, AudioTrack.MODE_STREAM);
+        //播放
+        //audioTrack.play();
+        //写入PCM
+        //audioTrack.write(audioData, offsetInBytes, sizeInBytes);
+        return audioTrack;
+    }
 
     static
     {
