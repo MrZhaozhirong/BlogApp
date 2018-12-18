@@ -15,7 +15,7 @@ public class ZzrFFPlayer {
     public native int play();
     public native void release();
 
-    public native int musicPlay(String media_input_str);
+    public native int playMusic(String media_input_str);
 
     /**
      * 创建一个AudioTrac对象，用于播放
@@ -35,7 +35,7 @@ public class ZzrFFPlayer {
         }
 
         int bufferSizeInBytes = AudioTrack.getMinBufferSize(sampleRateInHz, channelConfig, audioFormat);
-
+        //此方法已经deprecated，可以参考下方的代码。
         AudioTrack audioTrack = new AudioTrack(
                 AudioManager.STREAM_MUSIC,
                 sampleRateInHz, channelConfig,
@@ -45,6 +45,20 @@ public class ZzrFFPlayer {
         //audioTrack.play();
         //写入PCM
         //audioTrack.write(audioData, offsetInBytes, sizeInBytes);
+
+
+        //AudioManager mAudioManager = (AudioManager) Context.getSystemService(Context.AUDIO_SERVICE);
+        //int bufferSize = AudioTrack.getMinBufferSize(sampleRateInHz, channelConfig, audioFormat);
+        //int sessionId = mAudioManager.generateAudioSessionId();
+        //AudioAttributes audioAttributes = new AudioAttributes.Builder()
+        //        .setUsage(AudioAttributes.USAGE_MEDIA)
+        //        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+        //        .build();
+        //AudioFormat audioFormat = new AudioFormat.Builder().setSampleRate(sampleRateInHz)
+        //        .setEncoding(audioFormat)
+        //        .setChannelMask(channelConfig)
+        //        .build();
+        //AudioTrack mAudioTrack = new AudioTrack(audioAttributes, audioFormat, bufferSize * 2, AudioTrack.MODE_STREAM, sessionId);
         return audioTrack;
     }
 

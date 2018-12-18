@@ -167,4 +167,5 @@ target_link_libraries( # 指定目标链接库
                        avcodec
                        avformat
                        swscale
+                       swresample
                        yuv )

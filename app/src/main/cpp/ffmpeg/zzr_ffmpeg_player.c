@@ -59,7 +59,6 @@ Java_org_zzrblog_mp_ZzrFFPlayer_play(JNIEnv *env, jobject jobj)
 {
     const char *input_cstr = (*env)->GetStringUTFChars(env, gInputPath, 0);
 
-
     AVFormatContext *pFormatContext = avformat_alloc_context();
     // 打开输入视频文件
     if(avformat_open_input(&pFormatContext, input_cstr, NULL, NULL) != 0){
@@ -161,7 +160,7 @@ Java_org_zzrblog_mp_ZzrFFPlayer_play(JNIEnv *env, jobject jobj)
 
                     ANativeWindow_unlockAndPost(nativeWindow);
                     // 释放锁并 swap交换显示内存到屏幕上。
-                    usleep(100 * 16);
+                    usleep(500 * 16);
                 }
             }
         }
@@ -238,7 +237,7 @@ int createAudioTrackContext(JNIEnv *env, jobject instance, int out_sample_rate, 
 }
 
 JNIEXPORT jint JNICALL
-Java_org_zzrblog_mp_ZzrFFPlayer_musicPlay(JNIEnv *env, jobject instance, jstring media_input_jstr) {
+Java_org_zzrblog_mp_ZzrFFPlayer_playMusic(JNIEnv *env, jobject instance, jstring media_input_jstr) {
     const char *media_input_cstr = (*env)->GetStringUTFChars(env, media_input_jstr, 0);
 
     av_log_set_callback(custom_log);
@@ -308,7 +307,7 @@ Java_org_zzrblog_mp_ZzrFFPlayer_musicPlay(JNIEnv *env, jobject instance, jstring
     int out_channel_nb = av_get_channel_layout_nb_channels(out_ch_layout);
 
     createAudioTrackContext(env, instance, out_sample_rate, out_channel_nb);
-    (*env)->CallVoidMethod(env,audioTrackCtx.audio_track,audioTrackCtx.audio_track_play_mid);
+    (*env)->CallVoidMethod(env, audioTrackCtx.audio_track, audioTrackCtx.audio_track_play_mid);
 
     int ret;
     while(av_read_frame(pFormatContext, packet) >= 0)
@@ -329,26 +328,35 @@ Java_org_zzrblog_mp_ZzrFFPlayer_musicPlay(JNIEnv *env, jobject instance, jstring
                     LOGW("avcodec_receive_frame：%d\n", AVERROR(ret));
                     goto end;  //end处进行资源释放等善后处理
                 }
-
                 if (ret >= 0)
                 {
                     swr_convert(swrCtx, &out_buffer, MAX_AUDIO_FARME_SIZE, (const uint8_t **) frame->data, frame->nb_samples);
                     //获取sample的size
                     int out_buffer_size = av_samples_get_buffer_size(NULL, out_channel_nb,
                                                                      frame->nb_samples, out_sample_fmt, 1);
-
+                    //AudioTrack.write(byte[] int int) 需要byte数组,对应jni的jbyteArray
+                    //需要把out_buffer缓冲区数据转成byte数组
+                    jbyteArray audio_data_byteArray = (*env)->NewByteArray(env, out_buffer_size);
+                    jbyte* fp_AudioDataArray = (*env)->GetByteArrayElements(env, audio_data_byteArray, NULL);
+                    memcpy(fp_AudioDataArray, out_buffer, (size_t) out_buffer_size);
+                    (*env)->ReleaseByteArrayElements(env, audio_data_byteArray, fp_AudioDataArray,0);
+                    // AudioTrack.write PCM数据
+                    (*env)->CallIntMethod(env,audioTrackCtx.audio_track,audioTrackCtx.audio_track_write_mid,
+                                          audio_data_byteArray, 0, out_buffer_size);
+                    //！！！释放局部引用，要不然会局部引用溢出
+                    (*env)->DeleteLocalRef(env,audio_data_byteArray);
+                    usleep(1000 * 16);
                 }
             }
         }
         av_packet_unref(packet);
     }
-    LOGD("媒体文件转换PCM结束\n");
+    LOGD("媒体文件.PCM结束\n");
 
 
 end:
     av_free(out_buffer);
     swr_free(&swrCtx);
-    av_free(out_buffer);
     av_frame_free(&frame);
     avcodec_close(pCodecContext);
     avcodec_free_context(&pCodecContext);

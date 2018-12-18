@@ -97,7 +97,14 @@ public class MultiProcessActivity extends Activity {
         ffPlayer.play();
     }
 
-
+    public void clickOnPlayMusic(@SuppressLint("USELESS") View view) {
+        String path = Environment.getExternalStorageDirectory().getPath();
+        String input_mp4 = path + "/10s_test.mp4";
+        if(ffPlayer==null) {
+            ffPlayer = new ZzrFFPlayer();
+        }
+        ffPlayer.playMusic(input_mp4);
+    }
 
 
 
