@@ -8,9 +8,9 @@ find_library( log-lib log )
 # Example cmake
 add_library( native-lib
              SHARED
-             src/main/cpp/native-lib.cpp )
+             src/main/cpp/native-lib.c )
 target_link_libraries(native-lib
-                      ${log-lib} )
+                      ${log-lib})
 
 # 为log_common.h 指定平台
 IF (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")

@@ -19,12 +19,14 @@ import org.zzrblog.fmod.FmodActivity;
 public class MainActivity extends Activity {
 
     static {
-        try{
+        try {
             System.loadLibrary("native-lib");
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
+
+    public native void pThreadEnvTest();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,52 +36,10 @@ public class MainActivity extends Activity {
         PermissionUtils.requestMultiPermissions(this, mPermissionGrant);
     }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
+
+    public void clickOnPThreadEnvTest(@SuppressLint("USELESS") View view) {
+        pThreadEnvTest();
     }
-
-    private PermissionUtils.PermissionGrant mPermissionGrant = new PermissionUtils.PermissionGrant() {
-
-        @Override
-        public void onPermissionGranted(int requestCode) {
-            switch (requestCode) {
-                case PermissionUtils.CODE_RECORD_AUDIO:
-                    Toast.makeText(MainActivity.this, "Result Permission Grant CODE_RECORD_AUDIO", Toast.LENGTH_SHORT).show();
-                    break;
-                case PermissionUtils.CODE_GET_ACCOUNTS:
-                    Toast.makeText(MainActivity.this, "Result Permission Grant CODE_GET_ACCOUNTS", Toast.LENGTH_SHORT).show();
-                    break;
-                case PermissionUtils.CODE_READ_PHONE_STATE:
-                    Toast.makeText(MainActivity.this, "Result Permission Grant CODE_READ_PHONE_STATE", Toast.LENGTH_SHORT).show();
-                    break;
-                case PermissionUtils.CODE_CALL_PHONE:
-                    Toast.makeText(MainActivity.this, "Result Permission Grant CODE_CALL_PHONE", Toast.LENGTH_SHORT).show();
-                    break;
-                case PermissionUtils.CODE_CAMERA:
-                    Toast.makeText(MainActivity.this, "Result Permission Grant CODE_CAMERA", Toast.LENGTH_SHORT).show();
-                    break;
-                case PermissionUtils.CODE_ACCESS_FINE_LOCATION:
-                    Toast.makeText(MainActivity.this, "Result Permission Grant CODE_ACCESS_FINE_LOCATION", Toast.LENGTH_SHORT).show();
-                    break;
-                case PermissionUtils.CODE_ACCESS_COARSE_LOCATION:
-                    Toast.makeText(MainActivity.this, "Result Permission Grant CODE_ACCESS_COARSE_LOCATION", Toast.LENGTH_SHORT).show();
-                    break;
-                case PermissionUtils.CODE_READ_EXTERNAL_STORAGE:
-                    Toast.makeText(MainActivity.this, "Result Permission Grant CODE_READ_EXTERNAL_STORAGE", Toast.LENGTH_SHORT).show();
-                    break;
-                case PermissionUtils.CODE_WRITE_EXTERNAL_STORAGE:
-                    Toast.makeText(MainActivity.this, "Result Permission Grant CODE_WRITE_EXTERNAL_STORAGE", Toast.LENGTH_SHORT).show();
-                    break;
-                default:
-                    break;
-            }
-        }
-    };
-
-
-
-
 
     public void clickOnHockey(@SuppressLint("USELESS") View view) {
         startActivity(new Intent(MainActivity.this, HockeyActivity.class));
@@ -101,11 +61,63 @@ public class MainActivity extends Activity {
         startActivity(new Intent(MainActivity.this, FmodActivity.class));
     }
 
-    public void clickOnFmodEffect(View view){
+    public void clickOnFmodEffect(View view) {
         startActivity(new Intent(MainActivity.this, EffectActivity.class));
     }
 
     public void clickOnFFmpegTest(@SuppressLint("USELESS") View view) {
         startActivity(new Intent(MainActivity.this, FFmpegTestActivity.class));
     }
+
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+    }
+
+    private PermissionUtils.PermissionGrant mPermissionGrant = new PermissionUtils.PermissionGrant() {
+
+        @Override
+        public void onPermissionGranted(int requestCode) {
+            switch (requestCode) {
+                case PermissionUtils.CODE_RECORD_AUDIO:
+                    Toast.makeText(MainActivity.this, "Result Permission Grant CODE_RECORD_AUDIO", Toast
+                            .LENGTH_SHORT).show();
+                    break;
+                case PermissionUtils.CODE_GET_ACCOUNTS:
+                    Toast.makeText(MainActivity.this, "Result Permission Grant CODE_GET_ACCOUNTS", Toast
+                            .LENGTH_SHORT).show();
+                    break;
+                case PermissionUtils.CODE_READ_PHONE_STATE:
+                    Toast.makeText(MainActivity.this, "Result Permission Grant CODE_READ_PHONE_STATE", Toast
+                            .LENGTH_SHORT).show();
+                    break;
+                case PermissionUtils.CODE_CALL_PHONE:
+                    Toast.makeText(MainActivity.this, "Result Permission Grant CODE_CALL_PHONE", Toast.LENGTH_SHORT)
+                            .show();
+                    break;
+                case PermissionUtils.CODE_CAMERA:
+                    Toast.makeText(MainActivity.this, "Result Permission Grant CODE_CAMERA", Toast.LENGTH_SHORT).show();
+                    break;
+                case PermissionUtils.CODE_ACCESS_FINE_LOCATION:
+                    Toast.makeText(MainActivity.this, "Result Permission Grant CODE_ACCESS_FINE_LOCATION", Toast
+                            .LENGTH_SHORT).show();
+                    break;
+                case PermissionUtils.CODE_ACCESS_COARSE_LOCATION:
+                    Toast.makeText(MainActivity.this, "Result Permission Grant CODE_ACCESS_COARSE_LOCATION", Toast
+                            .LENGTH_SHORT).show();
+                    break;
+                case PermissionUtils.CODE_READ_EXTERNAL_STORAGE:
+                    Toast.makeText(MainActivity.this, "Result Permission Grant CODE_READ_EXTERNAL_STORAGE", Toast
+                            .LENGTH_SHORT).show();
+                    break;
+                case PermissionUtils.CODE_WRITE_EXTERNAL_STORAGE:
+                    Toast.makeText(MainActivity.this, "Result Permission Grant CODE_WRITE_EXTERNAL_STORAGE", Toast
+                            .LENGTH_SHORT).show();
+                    break;
+                default:
+                    break;
+            }
+        }
+    };
 }
