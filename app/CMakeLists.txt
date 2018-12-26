@@ -5,6 +5,12 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/src/main/jniLibs/${ANDR
 
 # 在系统找出预编译的log库，指定在CMake脚本下的别名为log-lib
 find_library( log-lib log )
+# Example cmake
+add_library( native-lib
+             SHARED
+             src/main/cpp/native-lib.cpp )
+target_link_libraries(native-lib
+                      ${log-lib} )
 
 # 为log_common.h 指定平台
 IF (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
@@ -169,3 +175,7 @@ target_link_libraries( # 指定目标链接库
                        swscale
                        swresample
                        yuv )
+
+
+
+

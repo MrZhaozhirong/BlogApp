@@ -67,8 +67,8 @@
         <Button
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="多进程测试页"
-            android:onClick="clickOnMultiProcess"/>
+            android:text="ffmpeg"
+            android:onClick="clickOnFFmpegTest"/>
     </LinearLayout>
 
 

@@ -12,14 +12,18 @@ import org.zzrblog.blogapp.cube.CubeActivity;
 import org.zzrblog.blogapp.hockey.HockeyActivity;
 import org.zzrblog.blogapp.panorama.PanoramaActivity;
 import org.zzrblog.camera.ContinuousRecordActivity;
+import org.zzrblog.ffmp.FFmpegTestActivity;
 import org.zzrblog.fmod.EffectActivity;
 import org.zzrblog.fmod.FmodActivity;
-import org.zzrblog.ffmp.FFmpegTestActivity;
 
 public class MainActivity extends Activity {
 
     static {
-
+        try{
+            System.loadLibrary("native-lib");
+        }catch (Exception e){
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -101,7 +105,7 @@ public class MainActivity extends Activity {
         startActivity(new Intent(MainActivity.this, EffectActivity.class));
     }
 
-    public void clickOnMultiProcess(@SuppressLint("USELESS") View view) {
+    public void clickOnFFmpegTest(@SuppressLint("USELESS") View view) {
         startActivity(new Intent(MainActivity.this, FFmpegTestActivity.class));
     }
 }
