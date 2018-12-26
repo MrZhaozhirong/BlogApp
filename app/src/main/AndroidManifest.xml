@@ -33,8 +33,9 @@
         <activity android:name="org.zzrblog.fmod.FmodActivity" />
         <activity android:name="org.zzrblog.fmod.EffectActivity" />
 
-        <activity android:name="org.zzrblog.mp.MultiProcessActivity" />
-        <service android:name="org.zzrblog.mp.FFmpegAIDLService"
+        <activity android:name="org.zzrblog.ffmp.FFmpegTestActivity" />
+
+        <service android:name="org.zzrblog.ffmp.FFmpegAIDLService"
                  android:process=":mprocess2"/>
     </application>
 

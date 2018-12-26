@@ -1,4 +1,4 @@
-package org.zzrblog.mp;
+package org.zzrblog.ffmp;
 //Multi Process
 
 import android.app.Service;

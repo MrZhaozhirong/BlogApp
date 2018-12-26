@@ -14,7 +14,7 @@ import org.zzrblog.blogapp.panorama.PanoramaActivity;
 import org.zzrblog.camera.ContinuousRecordActivity;
 import org.zzrblog.fmod.EffectActivity;
 import org.zzrblog.fmod.FmodActivity;
-import org.zzrblog.mp.MultiProcessActivity;
+import org.zzrblog.ffmp.FFmpegTestActivity;
 
 public class MainActivity extends Activity {
 
@@ -98,7 +98,7 @@ public class MainActivity extends Activity {
     }
 
     public void clickOnMultiProcess(@SuppressLint("USELESS") View view) {
-        startActivity(new Intent(MainActivity.this, MultiProcessActivity.class));
+        startActivity(new Intent(MainActivity.this, FFmpegTestActivity.class));
     }
 
 }

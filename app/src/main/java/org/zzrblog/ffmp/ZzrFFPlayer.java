@@ -1,4 +1,4 @@
-package org.zzrblog.mp;
+package org.zzrblog.ffmp;
 
 import android.media.AudioFormat;
 import android.media.AudioManager;
