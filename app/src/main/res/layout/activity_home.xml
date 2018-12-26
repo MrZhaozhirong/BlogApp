@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout
+<LinearLayout
     android:id="@+id/activity_home"
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="vertical"
     android:paddingBottom="@dimen/activity_vertical_margin"
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
@@ -14,62 +15,77 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:background="@android:color/transparent">
+        android:orientation="horizontal">
+
         <Button
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="曲棍球"
-            android:onClick="clickOnHockey"/>
+            android:onClick="clickOnHockey"
+            android:text="曲棍球"/>
+
         <Space
             android:layout_width="1dp"
             android:layout_height="wrap_content"/>
+
         <Button
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="正方形"
-            android:onClick="clickOnCube"/>
+            android:onClick="clickOnCube"
+            android:text="正方形"/>
+
         <Space
             android:layout_width="1dp"
             android:layout_height="wrap_content"/>
+
         <Button
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="全景球"
-            android:onClick="clickOnPanorama"/>
+            android:onClick="clickOnPanorama"
+            android:text="全景球"/>
+
         <Space
             android:layout_width="1dp"
             android:layout_height="wrap_content"/>
+
         <Button
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="水印录制"
-            android:onClick="clickOnWatermarkRecord"/>
-        <Space
-            android:layout_width="1dp"
-            android:layout_height="wrap_content"/>
-        <Button
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="FMOD-DEMO"
-            android:onClick="clickOnFmod"/>
-        <Space
-            android:layout_width="1dp"
-            android:layout_height="wrap_content"/>
-        <Button
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="FMOD-EFFECT"
-            android:onClick="clickOnFmodEffect"/>
-        <Space
-            android:layout_width="1dp"
-            android:layout_height="wrap_content"/>
-        <Button
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="ffmpeg"
-            android:onClick="clickOnFFmpegTest"/>
+            android:onClick="clickOnWatermarkRecord"
+            android:text="水印录制"/>
     </LinearLayout>
 
 
-</RelativeLayout>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:onClick="clickOnFmod"
+            android:text="FMOD-DEMO"/>
+
+        <Space
+            android:layout_width="1dp"
+            android:layout_height="wrap_content"/>
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:onClick="clickOnFmodEffect"
+            android:text="FMOD-EFFECT"/>
+
+        <Space
+            android:layout_width="1dp"
+            android:layout_height="wrap_content"/>
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:onClick="clickOnFFmpegTest"
+            android:text="FFMPEG"/>
+    </LinearLayout>
+
+
+</LinearLayout>
