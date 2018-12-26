@@ -20,7 +20,7 @@ void custom_log(void *ptr, int level, const char* fmt, va_list vl){
 }
 
 JNIEXPORT jint JNICALL
-Java_org_zzrblog_mp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz,
+Java_org_zzrblog_ffmp_ZzrFFmpeg_Mp4TOYuv(JNIEnv *env, jclass clazz,
                                        jstring input_mp4_jstr, jstring output_yuv_jstr) {
 
     //const char *input_mp4_cstr = env->GetStringUTFChars(input_mp4_jstr, 0);
@@ -178,7 +178,7 @@ end:
 #define MAX_AUDIO_FARME_SIZE 48000 * 2
 
 JNIEXPORT jint JNICALL
-Java_org_zzrblog_mp_ZzrFFmpeg_Mp34TOPcm(JNIEnv *env, jclass clazz, jstring input_media_jstr, jstring output_pcm_jstr) {
+Java_org_zzrblog_ffmp_ZzrFFmpeg_Mp34TOPcm(JNIEnv *env, jclass clazz, jstring input_media_jstr, jstring output_pcm_jstr) {
     const char *input_media_cstr = (*env)->GetStringUTFChars(env, input_media_jstr, 0);
     const char *output_pcm_cstr = (*env)->GetStringUTFChars(env, output_pcm_jstr, 0);
 

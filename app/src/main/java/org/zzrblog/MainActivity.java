@@ -18,6 +18,10 @@ import org.zzrblog.ffmp.FFmpegTestActivity;
 
 public class MainActivity extends Activity {
 
+    static {
+
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -100,5 +104,4 @@ public class MainActivity extends Activity {
     public void clickOnMultiProcess(@SuppressLint("USELESS") View view) {
         startActivity(new Intent(MainActivity.this, FFmpegTestActivity.class));
     }
-
 }

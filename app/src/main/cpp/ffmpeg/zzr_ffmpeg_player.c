@@ -29,7 +29,7 @@ void custom_log(void *ptr, int level, const char* fmt, va_list vl){
 }
 
 JNIEXPORT void JNICALL
-Java_org_zzrblog_mp_ZzrFFPlayer_init(JNIEnv *env, jobject jobj, jstring input_jstr, jobject surface)
+Java_org_zzrblog_ffmp_ZzrFFPlayer_init(JNIEnv *env, jobject jobj, jstring input_jstr, jobject surface)
 {
     gJNIEnv = env;
     gInputPath = (jstring) (*gJNIEnv)->NewGlobalRef(gJNIEnv, input_jstr); //创建输入的媒体资源的全局引用。
@@ -44,7 +44,7 @@ Java_org_zzrblog_mp_ZzrFFPlayer_init(JNIEnv *env, jobject jobj, jstring input_js
 }
 
 JNIEXPORT void JNICALL
-Java_org_zzrblog_mp_ZzrFFPlayer_release(JNIEnv *env, jobject jobj)
+Java_org_zzrblog_ffmp_ZzrFFPlayer_release(JNIEnv *env, jobject jobj)
 {
     if(gJNIEnv!=NULL)
     {
@@ -55,7 +55,7 @@ Java_org_zzrblog_mp_ZzrFFPlayer_release(JNIEnv *env, jobject jobj)
 }
 
 JNIEXPORT jint JNICALL
-Java_org_zzrblog_mp_ZzrFFPlayer_play(JNIEnv *env, jobject jobj)
+Java_org_zzrblog_ffmp_ZzrFFPlayer_play(JNIEnv *env, jobject jobj)
 {
     const char *input_cstr = (*env)->GetStringUTFChars(env, gInputPath, 0);
 
@@ -237,7 +237,7 @@ int createAudioTrackContext(JNIEnv *env, jobject instance, int out_sample_rate, 
 }
 
 JNIEXPORT jint JNICALL
-Java_org_zzrblog_mp_ZzrFFPlayer_playMusic(JNIEnv *env, jobject instance, jstring media_input_jstr) {
+Java_org_zzrblog_ffmp_ZzrFFPlayer_playMusic(JNIEnv *env, jobject instance, jstring media_input_jstr) {
     const char *media_input_cstr = (*env)->GetStringUTFChars(env, media_input_jstr, 0);
 
     av_log_set_callback(custom_log);
