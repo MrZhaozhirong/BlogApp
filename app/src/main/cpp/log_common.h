@@ -7,7 +7,7 @@
 #include <android/log.h>
 #include <string.h>
 
-#define DEBUG
+#define DEBUG // DEBUG开关，整行注销就能全局关闭调试日志。
 
 // Windows 和 Linux 这两个宏是在 CMakeLists.txt 通过 ADD_DEFINITIONS 定义的
 #ifdef Windows

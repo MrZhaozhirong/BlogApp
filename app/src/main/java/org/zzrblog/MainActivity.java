@@ -16,6 +16,8 @@ import org.zzrblog.ffmp.FFmpegTestActivity;
 import org.zzrblog.fmod.EffectActivity;
 import org.zzrblog.fmod.FmodActivity;
 
+import java.util.UUID;
+
 public class MainActivity extends Activity {
 
     static {
@@ -26,7 +28,12 @@ public class MainActivity extends Activity {
         }
     }
 
-    public native void pThreadEnvTest();
+    public native void nativeThreadEnvTest();
+
+    public static String getUuid() {
+        // 提供给nativeThreadEnvTest使用
+        return UUID.randomUUID().toString();
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,9 +43,8 @@ public class MainActivity extends Activity {
         PermissionUtils.requestMultiPermissions(this, mPermissionGrant);
     }
 
-
     public void clickOnPThreadEnvTest(@SuppressLint("USELESS") View view) {
-        pThreadEnvTest();
+        nativeThreadEnvTest();
     }
 
     public void clickOnHockey(@SuppressLint("USELESS") View view) {
@@ -68,7 +74,6 @@ public class MainActivity extends Activity {
     public void clickOnFFmpegTest(@SuppressLint("USELESS") View view) {
         startActivity(new Intent(MainActivity.this, FFmpegTestActivity.class));
     }
-
 
     @Override
     protected void onDestroy() {
