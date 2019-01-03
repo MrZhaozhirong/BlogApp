@@ -9,35 +9,55 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>
 
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:orientation="vertical">
 
-        <Button
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:onClick="clickOnMP42YUV"
-            android:text="MP4分YUV"/>
+            android:orientation="horizontal">
 
-        <Button
-            android:layout_width="wrap_content"
+            <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:onClick="clickOnPlay"
+                android:textAllCaps="false"
+                android:text="播放视频-UIThread"/>
+
+            <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:onClick="clickOnPlayMusic"
+                android:textAllCaps="false"
+                android:text="播放音频-UIThread"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:onClick="clickOnMP42PCM"
-            android:text="MP4转PCM"/>
+            android:orientation="horizontal">
 
-        <Button
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:onClick="clickOnPlay"
-            android:text="播放视频"/>
+            <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:onClick="clickOnMP42YUV"
+                android:text="MP4提取YUV"/>
 
-        <Button
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:onClick="clickOnPlayMusic"
-            android:text="播放音频"/>
+            <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:onClick="clickOnMP42PCM"
+                android:text="MP4提取PCM"/>
 
+            <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="同步播放-PThread"/>
+        </LinearLayout>
     </LinearLayout>
+
 
 </FrameLayout>

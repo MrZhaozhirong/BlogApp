@@ -3,9 +3,10 @@ package org.zzrblog.ffmp;
 import android.util.Log;
 
 /**
+ * 此模块主要是演示 视频解码 音频解码的主要流程。
+ * ffmpeg代码都运行在主线程上，会阻塞主线程。
  * Created by zzr on 2018/11/28.
  */
-
 public class ZzrFFmpeg {
 
     public static native int Mp34TOPcm(String input_mp3_str, String output_pcm_str);

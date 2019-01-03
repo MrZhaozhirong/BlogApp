@@ -6,9 +6,10 @@ import android.media.AudioTrack;
 import android.view.Surface;
 
 /**
+ * 此模块主要是演示 播放视频 播放音频的方法技巧。
+ * ffmpeg代码都运行在主线程上，会阻塞主线程。
  * Created by zzr on 2018/12/11.
  */
-
 public class ZzrFFPlayer {
 
     public native void init(String media_input_str,Surface surface);

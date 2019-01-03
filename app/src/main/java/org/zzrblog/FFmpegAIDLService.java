@@ -1,4 +1,4 @@
-package org.zzrblog.ffmp;
+package org.zzrblog;
 //Multi Process
 
 import android.app.Service;
@@ -8,7 +8,6 @@ import android.os.RemoteException;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
-import org.zzrblog.ZzrApplication;
 import org.zzrblog.blogapp.IFFmpegAIDLInterface;
 
 

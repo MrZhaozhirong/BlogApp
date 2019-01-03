@@ -19,7 +19,6 @@ import android.widget.Toast;
 
 import org.zzrblog.blogapp.IFFmpegAIDLInterface;
 import org.zzrblog.blogapp.R;
-import org.zzrblog.ffmp.FFmpegAIDLService;
 
 /**
  * Created by zzr on 2018/12/26.
