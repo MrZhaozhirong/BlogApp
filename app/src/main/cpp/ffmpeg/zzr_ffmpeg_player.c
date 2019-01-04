@@ -179,11 +179,7 @@ end:
     return 0;
 }
 
-int isEmptyStr(const char * str){
-    if(strlen(str)==0) return -1;
-    if(*str == '\0') return -1;
-    return 0;
-}
+
 
 
 
