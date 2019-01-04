@@ -1,5 +1,5 @@
 #include <jni.h>
-#include "log_common.h"
+#include "common/log_common.h"
 
 #include <unistd.h>
 #include <pthread.h>

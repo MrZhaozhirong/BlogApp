@@ -1,6 +1,6 @@
 #include <jni.h>
 #include <stdio.h>
-#include "../log_common.h"
+#include "../common/log_common.h"
 #include "include/libavutil/log.h"
 #include "include/libavformat/avformat.h"
 #include "include/libswscale/swscale.h"
