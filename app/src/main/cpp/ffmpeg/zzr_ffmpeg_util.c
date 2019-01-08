@@ -3,7 +3,7 @@
 //
 
 #include <jni.h>
-#include "../common/log_common.h"
+#include "../common/zzr_common.h"
 #include "include/libavformat/avformat.h"
 #include "include/libavutil/imgutils.h"
 #include "include/libswscale/swscale.h"

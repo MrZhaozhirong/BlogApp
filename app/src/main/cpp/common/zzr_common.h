@@ -41,8 +41,8 @@
 #endif // DEBUG
 
 
-int isEmptyStr(const char * str);
-void ffmpeg_custom_log(void *ptr, int level, const char* fmt, va_list vl);
+int     isEmptyStr (const char * str);
+void    ffmpeg_custom_log (void *ptr, int level, const char* fmt, va_list vl);
 
 
 #endif //LOG_COMMON_H

@@ -1,6 +1,6 @@
 #include <jni.h>
 #include <stdio.h>
-#include "../common/log_common.h"
+#include "../common/zzr_common.h"
 #include "include/libavutil/log.h"
 #include "include/libavformat/avformat.h"
 #include "include/libswscale/swscale.h"
@@ -66,7 +66,7 @@ Java_org_zzrblog_ffmp_ZzrFFPlayer_play(JNIEnv *env, jobject jobj)
         return -1;
     }
     // 获取视频信息
-    if(avformat_find_stream_info(pFormatContext,NULL) < 0){
+    if(avformat_find_stream_info(pFormatContext, NULL) < 0){
         LOGE("%s","获取视频信息失败");
         return -2;
     }

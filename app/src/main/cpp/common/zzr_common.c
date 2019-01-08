@@ -6,7 +6,7 @@
 #include <jni.h>
 #include <assert.h>
 #include <stdio.h>
-#include "log_common.h"
+#include "zzr_common.h"
 
 JavaVM * gJavaVM;
 
