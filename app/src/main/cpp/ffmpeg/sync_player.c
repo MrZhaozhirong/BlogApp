@@ -55,151 +55,6 @@ typedef struct _SyncPlayer {
 
 
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////// native method implementation ////////////
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//声明全局变量，在common.c的JNI_OnLoad定义
-extern JavaVM * gJavaVM;
-SyncPlayer* mSyncPlayer;
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-JNIEXPORT void JNICALL
-Java_org_zzrblog_ffmp_SyncPlayer_nativeInit(JNIEnv *env, jobject instance)
-{
-    // 0.FFmpeg's av_log output
-    av_log_set_callback(ffmpeg_custom_log);
-    // 1.注册组件
-    av_register_all();
-    avcodec_register_all();
-    avformat_network_init();
-
-    mSyncPlayer = (SyncPlayer*)malloc(sizeof(SyncPlayer));
-}
-
-JNIEXPORT void JNICALL
-Java_org_zzrblog_ffmp_SyncPlayer_nativeRelease(JNIEnv *env, jobject instance)
-{
-    if(mSyncPlayer == NULL)
-        return;
-    if(mSyncPlayer->input_format_ctx == NULL){
-        return;
-    }
-    // 此env 和 nativePrepare的env是一致的，所以放心使用jni
-    (*env)->DeleteGlobalRef(env, mSyncPlayer->audio_track);
-    for(int i=0; i<mSyncPlayer->num_streams; i++) {
-        // 有可能出现为空，因为只保存了音视频的AVCodecContext，没有处理字幕流的
-        // 但是空间还是按照num_streams的个数创建了
-        AVCodecContext * pCodecContext = mSyncPlayer->input_codec_ctx[i];
-        if(pCodecContext != NULL)
-        {
-            avcodec_close(pCodecContext);
-            avcodec_free_context(&pCodecContext);
-            pCodecContext = NULL; //防止野指针
-        }
-    }
-    free(mSyncPlayer->input_codec_ctx);
-
-    mSyncPlayer->stop_thread_avpacket_distributor = 1;
-    pthread_join(mSyncPlayer->thread_avpacket_distributor, NULL);
-    mSyncPlayer->stop_thread_video_decoder = 1;
-    pthread_join(mSyncPlayer->thread_video_decoder, NULL);
-
-    avformat_close_input(&(mSyncPlayer->input_format_ctx));
-    avformat_free_context(mSyncPlayer->input_format_ctx);
-    mSyncPlayer->input_format_ctx = NULL;
-    (*env)->DeleteGlobalRef(env, mSyncPlayer->jinstance);
-    free(mSyncPlayer);
-    mSyncPlayer = NULL;
-}
-
-JNIEXPORT void JNICALL
-Java_org_zzrblog_ffmp_SyncPlayer_nativePrepare(JNIEnv *env, jobject instance,
-                                               jstring media_input_jstr, jobject jSurface)
-{
-    if(mSyncPlayer == NULL) {
-        LOGE("%s","请调用函数：nativeInit");
-        return;
-    }
-    const char *media_input_cstr = (*env)->GetStringUTFChars(env, media_input_jstr, 0);
-
-    AVFormatContext *pFormatContext = avformat_alloc_context();
-    // 打开输入视频文件
-    if(avformat_open_input(&pFormatContext, media_input_cstr, NULL, NULL) != 0){
-        LOGE("%s","打开输入视频文件失败");
-        return;
-    }
-    // 获取视频信息
-    if(avformat_find_stream_info(pFormatContext,NULL) < 0){
-        LOGE("%s","获取视频信息失败");
-        return;
-    }
-
-    int video_stream_idx = -1;
-    int audio_stream_idx = -1;
-    for(int i=0; i<pFormatContext->nb_streams; i++)
-    {
-        if(pFormatContext->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
-            video_stream_idx = i;
-            break;
-        }
-        if(pFormatContext->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
-            audio_stream_idx = i;
-            break;
-        }
-    }
-    LOGD("VIDEO的索引位置：%d", video_stream_idx);
-    LOGD("AUDIO的索引位置：%d", audio_stream_idx);
-
-    mSyncPlayer->input_format_ctx = pFormatContext;
-    mSyncPlayer->num_streams = pFormatContext->nb_streams;
-    mSyncPlayer->audio_stream_index = audio_stream_idx;
-    mSyncPlayer->video_stream_index = video_stream_idx;
-    // 开辟nb_streams个空间，每个都是指针 (AVCodecContext* )
-    mSyncPlayer->input_codec_ctx = calloc(pFormatContext->nb_streams, sizeof(AVCodecContext* ) );
-    // 根据索引初始化对应的AVCodecContext，并放入mSyncPlayer.input_codec_ctx数组 对应的位置
-    int ret ;
-    ret = alloc_codec_context(mSyncPlayer, video_stream_idx);
-    if(ret < 0) return;
-    ret = alloc_codec_context(mSyncPlayer, audio_stream_idx);
-    if(ret < 0) return;
-
-    // SyncPlayer的java对象，需要建立引用 NewGlobalRef，记得DeleteGlobalRef
-    mSyncPlayer->jinstance = (*env)->NewGlobalRef(env, instance);
-    // 初始化视频渲染相关 ANativeWindow是NDK对象，不需要NewGlobalRef
-    mSyncPlayer->native_window = ANativeWindow_fromSurface(env, jSurface);
-    // 初始化音频播放相关 audio_track是java对象，需要NewGlobalRef，记得DeleteGlobalRef
-    ret = initAudioTrack(mSyncPlayer, env);
-    if(ret < 0) return;
-
-
-    (*env)->ReleaseStringUTFChars(env, media_input_jstr, media_input_cstr);
-}
-
-JNIEXPORT void JNICALL
-Java_org_zzrblog_ffmp_SyncPlayer_nativePlay(JNIEnv *env, jobject instance)
-{
-    if(mSyncPlayer == NULL) {
-        LOGE("%s","请调用函数：nativeInit");
-        return;
-    }
-    if(mSyncPlayer->input_format_ctx == NULL){
-        LOGW("%s","请调用函数：nativePrepare");
-        return;
-    }
-
-    mSyncPlayer->stop_thread_avpacket_distributor = 0;
-    pthread_create(&(mSyncPlayer->thread_avpacket_distributor), NULL, avpacket_distributor, mSyncPlayer);
-    usleep(1000); // 1000us = 1ms
-
-    mSyncPlayer->stop_thread_video_decoder = 0;
-    pthread_create(&(mSyncPlayer->thread_video_decoder), NULL, video_avframe_decoder, mSyncPlayer);
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////END： native method implementation ////////////
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-
 
 // avpacket_distributor：负责不断的读取视频文件中AVPacket，分别放入对应的解码器
 void* avpacket_distributor(void* arg)
@@ -210,7 +65,8 @@ void* avpacket_distributor(void* arg)
     AVCodecContext* audioCodecCtx = player->input_codec_ctx[player->audio_stream_index];
     AVCodecContext* videoCodecCtx = player->input_codec_ctx[player->video_stream_index];
     int ret;
-
+    int video_avpacket_count = 0;
+    int audio_avpacket_count = 0;
     while(av_read_frame(pFormatContext, packet) >= 0)
     {
         if(player->stop_thread_avpacket_distributor > 0) {
@@ -219,6 +75,7 @@ void* avpacket_distributor(void* arg)
         }
         if(packet->stream_index == player->video_stream_index)
         {
+            video_avpacket_count ++;
             ret = avcodec_send_packet(videoCodecCtx, packet);
             if(ret < 0) {
                 LOGW("videoCodecCtx avcodec_send_packet：%d\n", AVERROR(ret));
@@ -227,6 +84,7 @@ void* avpacket_distributor(void* arg)
         }
         if(packet->stream_index == player->audio_stream_index)
         {
+            audio_avpacket_count ++;
             ret = avcodec_send_packet(audioCodecCtx, packet);
             if(ret < 0) {
                 LOGW("audioCodecCtx avcodec_send_packet：%d\n", AVERROR(ret));
@@ -235,6 +93,8 @@ void* avpacket_distributor(void* arg)
         }
         av_packet_unref(packet);
     }
+    LOGI("video_avpacket_count:%d\n",video_avpacket_count);
+    LOGI("audio_avpacket_count:%d\n",audio_avpacket_count);
     LOGI("thread_avpacket_distributor exit ...\n");
     return 0;
 }
@@ -264,10 +124,11 @@ void* video_avframe_decoder(void* arg)
         ret = avcodec_receive_frame(videoCodecCtx, yuv_frame);
         if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF){
             LOGD("video avcodec_receive_frame：%d\n", ret);
-            break;
+            continue;
         }else if (ret < 0) {
             LOGW("video avcodec_receive_frame：%d\n", AVERROR(ret));
-            goto end;  //end处进行资源释放等善后处理
+            //goto end;  //end处进行资源释放等善后处理
+            break;
         }
         if (ret >= 0)
         {
@@ -288,6 +149,8 @@ void* video_avframe_decoder(void* arg)
     }
 
 end:
+    av_frame_free(&yuv_frame);
+    av_frame_free(&rgb_frame);
     LOGI("thread_video_avframe_decoder exit ...\n");
     return 0;
 }
@@ -372,4 +235,153 @@ int initAudioTrack(SyncPlayer* player, JNIEnv* env)
     player->audio_track = (*env)->NewGlobalRef(env,audio_track);
     return 0;
 }
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////// native method implementation ////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////// 声明全局变量，在common.c的JNI_OnLoad定义
+extern JavaVM * gJavaVM;
+SyncPlayer* mSyncPlayer;
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+JNIEXPORT void JNICALL
+Java_org_zzrblog_ffmp_SyncPlayer_nativeInit(JNIEnv *env, jobject instance)
+{
+    // 0.FFmpeg's av_log output
+    av_log_set_callback(ffmpeg_custom_log);
+    // 1.注册组件
+    av_register_all();
+    avcodec_register_all();
+    avformat_network_init();
+
+    mSyncPlayer = (SyncPlayer*)malloc(sizeof(SyncPlayer));
+}
+
+JNIEXPORT void JNICALL
+Java_org_zzrblog_ffmp_SyncPlayer_nativeRelease(JNIEnv *env, jobject instance)
+{
+    if(mSyncPlayer == NULL)
+        return;
+    if(mSyncPlayer->input_format_ctx == NULL){
+        return;
+    }
+    // 此env 和 nativePrepare的env是一致的，所以放心使用jni
+    (*env)->DeleteGlobalRef(env, mSyncPlayer->audio_track);
+    for(int i=0; i<mSyncPlayer->num_streams; i++) {
+        // 有可能出现为空，因为只保存了音视频的AVCodecContext，没有处理字幕流的
+        // 但是空间还是按照num_streams的个数创建了
+        AVCodecContext * pCodecContext = mSyncPlayer->input_codec_ctx[i];
+        if(pCodecContext != NULL)
+        {
+            avcodec_close(pCodecContext);
+            avcodec_free_context(&pCodecContext);
+            pCodecContext = NULL; //防止野指针
+        }
+    }
+    free(mSyncPlayer->input_codec_ctx);
+
+    mSyncPlayer->stop_thread_avpacket_distributor = 1;
+    pthread_join(mSyncPlayer->thread_avpacket_distributor, NULL);
+    mSyncPlayer->stop_thread_video_decoder = 1;
+    pthread_join(mSyncPlayer->thread_video_decoder, NULL);
+
+    avformat_close_input(&(mSyncPlayer->input_format_ctx));
+    avformat_free_context(mSyncPlayer->input_format_ctx);
+    mSyncPlayer->input_format_ctx = NULL;
+    (*env)->DeleteGlobalRef(env, mSyncPlayer->jinstance);
+    free(mSyncPlayer);
+    mSyncPlayer = NULL;
+}
+
+JNIEXPORT void JNICALL
+Java_org_zzrblog_ffmp_SyncPlayer_nativePrepare(JNIEnv *env, jobject instance,
+                                               jstring media_input_jstr, jobject jSurface)
+{
+    if(mSyncPlayer == NULL) {
+        LOGE("%s","请调用函数：nativeInit");
+        return;
+    }
+    const char *media_input_cstr = (*env)->GetStringUTFChars(env, media_input_jstr, 0);
+
+    AVFormatContext *pFormatContext = avformat_alloc_context();
+    // 打开输入视频文件
+    if(avformat_open_input(&pFormatContext, media_input_cstr, NULL, NULL) != 0){
+        LOGE("%s","打开输入视频文件失败");
+        return;
+    }
+    // 获取视频信息
+    if(avformat_find_stream_info(pFormatContext,NULL) < 0){
+        LOGE("%s","获取视频信息失败");
+        return;
+    }
+
+    int video_stream_idx = -1;
+    int audio_stream_idx = -1;
+    for(int i=0; i<pFormatContext->nb_streams; i++)
+    {
+        enum AVMediaType meida_type = pFormatContext->streams[i]->codecpar->codec_type;
+        switch(meida_type)
+        {
+            case AVMEDIA_TYPE_VIDEO:
+                video_stream_idx = i;
+                break;
+            case AVMEDIA_TYPE_AUDIO:
+                audio_stream_idx = i;
+                break;
+            default:
+                continue;
+        }
+    }
+    LOGD("VIDEO的索引位置：%d", video_stream_idx);
+    LOGD("AUDIO的索引位置：%d", audio_stream_idx);
+
+    mSyncPlayer->input_format_ctx = pFormatContext;
+    mSyncPlayer->num_streams = pFormatContext->nb_streams;
+    mSyncPlayer->audio_stream_index = audio_stream_idx;
+    mSyncPlayer->video_stream_index = video_stream_idx;
+    // 开辟nb_streams个空间，每个都是指针 (AVCodecContext* )
+    mSyncPlayer->input_codec_ctx = calloc(pFormatContext->nb_streams, sizeof(AVCodecContext* ) );
+    // 根据索引初始化对应的AVCodecContext，并放入mSyncPlayer.input_codec_ctx数组 对应的位置
+    int ret ;
+    ret = alloc_codec_context(mSyncPlayer, video_stream_idx);
+    if(ret < 0) return;
+    ret = alloc_codec_context(mSyncPlayer, audio_stream_idx);
+    if(ret < 0) return;
+
+    // SyncPlayer的java对象，需要建立引用 NewGlobalRef，记得DeleteGlobalRef
+    mSyncPlayer->jinstance = (*env)->NewGlobalRef(env, instance);
+    // 初始化视频渲染相关 ANativeWindow是NDK对象，不需要NewGlobalRef
+    mSyncPlayer->native_window = ANativeWindow_fromSurface(env, jSurface);
+    // 初始化音频播放相关 audio_track是java对象，需要NewGlobalRef，记得DeleteGlobalRef
+    ret = initAudioTrack(mSyncPlayer, env);
+    if(ret < 0) return;
+
+
+    (*env)->ReleaseStringUTFChars(env, media_input_jstr, media_input_cstr);
+}
+
+JNIEXPORT void JNICALL
+Java_org_zzrblog_ffmp_SyncPlayer_nativePlay(JNIEnv *env, jobject instance)
+{
+    if(mSyncPlayer == NULL) {
+        LOGE("%s","请调用函数：nativeInit");
+        return;
+    }
+    if(mSyncPlayer->input_format_ctx == NULL){
+        LOGW("%s","请调用函数：nativePrepare");
+        return;
+    }
+
+    mSyncPlayer->stop_thread_avpacket_distributor = 0;
+    pthread_create(&(mSyncPlayer->thread_avpacket_distributor), NULL, avpacket_distributor, mSyncPlayer);
+    usleep(1000); // 1000us = 1ms
+
+    mSyncPlayer->stop_thread_video_decoder = 0;
+    pthread_create(&(mSyncPlayer->thread_video_decoder), NULL, video_avframe_decoder, mSyncPlayer);
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////END： native method implementation ////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 

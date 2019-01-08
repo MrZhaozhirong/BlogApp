@@ -179,3 +179,28 @@ target_link_libraries( # 指定目标链接库
 
 
 
+
+
+
+
+add_library( # 生成动态库的名称
+             sync-player
+             # 指定是动态库SO
+             SHARED
+             # 编译库的源代码文件
+             src/main/cpp/ffmpeg/sync_player.c
+             src/main/cpp/common/zzr_common.c)
+
+target_link_libraries( # 指定目标链接库
+                       sync-player
+                       # 添加预编译库到目标链接库中
+                       ${log-lib}
+                       ${android-lib}
+                       avutil
+                       avcodec
+                       avformat
+                       swscale
+                       swresample
+                       yuv )
+
+

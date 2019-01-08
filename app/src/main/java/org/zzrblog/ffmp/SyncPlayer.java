@@ -43,10 +43,10 @@ public class SyncPlayer {
         surface = null;
     }
 
-    public native void nativeInit();
-    public native void nativePrepare(String media_input_str, Surface surface);
-    public native int nativePlay();
-    public native void nativeRelease();
+    private native void nativeInit();
+    private native void nativePrepare(String media_input_str, Surface surface);
+    private native int nativePlay();
+    private native void nativeRelease();
 
     static
     {

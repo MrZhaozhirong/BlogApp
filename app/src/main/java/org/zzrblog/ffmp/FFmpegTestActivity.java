@@ -25,6 +25,7 @@ public class FFmpegTestActivity extends Activity {
     private static final String TAG = "FFmpegTest";
     private SurfaceView surfaceView;
     private ZzrFFPlayer ffPlayer;
+    private SyncPlayer  syncPlayer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,8 +42,14 @@ public class FFmpegTestActivity extends Activity {
     protected void onDestroy() {
         super.onDestroy();
 
-
-        if(ffPlayer!=null)  ffPlayer.release();
+        if(syncPlayer!=null) {
+            syncPlayer.release();
+            syncPlayer = null;
+        }
+        if(ffPlayer!=null) {
+            ffPlayer.release();
+            ffPlayer = null;
+        }
     }
 
     public void clickOnPlay(@SuppressLint("USELESS") View view) {
@@ -63,6 +70,23 @@ public class FFmpegTestActivity extends Activity {
         }
         ffPlayer.playMusic(input_mp4);
     }
+
+    public void clickOnSyncPlay(@SuppressLint("USELESS") View view) {
+        String path = Environment.getExternalStorageDirectory().getPath();
+        String input_mp4 = path + "/10s_test.mp4";
+        if(syncPlayer==null) {
+            syncPlayer = new SyncPlayer(FFmpegTestActivity.this);
+            syncPlayer.setMediaSource(input_mp4);
+            syncPlayer.setRender(surfaceView.getHolder().getSurface());
+            syncPlayer.prepare();
+        }
+        syncPlayer.play();
+    }
+
+
+
+
+
 
 
 

@@ -55,7 +55,8 @@
             <Button
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="同步播放-PThread"/>
+                android:text="同步播放-PThread"
+                android:onClick="clickOnSyncPlay"/>
         </LinearLayout>
     </LinearLayout>
 
