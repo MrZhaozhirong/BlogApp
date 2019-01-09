@@ -5,9 +5,10 @@
              android:orientation="vertical">
 
     <SurfaceView
+        android:layout_gravity="center"
         android:id="@+id/surface_view"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
+        android:layout_width="320dp"
+        android:layout_height="180dp"/>
 
 
     <LinearLayout

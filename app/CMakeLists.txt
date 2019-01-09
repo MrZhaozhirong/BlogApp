@@ -189,6 +189,7 @@ add_library( # 生成动态库的名称
              SHARED
              # 编译库的源代码文件
              src/main/cpp/ffmpeg/sync_player.c
+             src/main/cpp/ffmpeg/AVPacket_buffer.c
              src/main/cpp/common/zzr_common.c)
 
 target_link_libraries( # 指定目标链接库
