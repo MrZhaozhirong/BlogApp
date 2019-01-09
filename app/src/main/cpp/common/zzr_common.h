@@ -2,8 +2,8 @@
 //
 // Created by nicky on 2018/11/29.
 //
-#ifndef LOG_COMMON_H
-#define LOG_COMMON_H
+#ifndef ZZR_COMMON_H
+#define ZZR_COMMON_H
 
 #include <android/log.h>
 #include <string.h>
@@ -45,4 +45,4 @@ int     isEmptyStr (const char * str);
 void    ffmpeg_custom_log (void *ptr, int level, const char* fmt, va_list vl);
 
 
-#endif //LOG_COMMON_H
+#endif // ZZR_COMMON_H
