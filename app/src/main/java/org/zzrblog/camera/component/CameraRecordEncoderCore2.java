@@ -276,6 +276,7 @@ public class CameraRecordEncoderCore2 {
                     if(length > 0 && isRecording){
                         mAudioEncoder.queueInputBuffer(inputBufIndex, 0, length,
                                 mVideoBufferInfo.presentationTimeUs, 0);
+                                // 注意这里我们直接使用视频的pts，以达到同步效果。
                                 //(System.nanoTime()-firstInputTimeNsec)/1000, 0);
                     } else if(!isRecording){
                         mAudioEncoder.queueInputBuffer(inputBufIndex, 0, 0, 0L,
