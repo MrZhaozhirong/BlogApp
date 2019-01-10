@@ -119,7 +119,7 @@ void* audio_avframe_decoder(void* arg)
     AVFrame *frame = av_frame_alloc();
     //16bit 44100 PCM 数据的实际内存空间。
     uint8_t *out_buffer = (uint8_t *)av_malloc(MAX_AUDIO_FRAME_SIZE);
-    // 启动AudioTrack
+    // AudioTrack.play
     (*env)->CallVoidMethod(env, player->audio_track, player->audio_track_play_mid);
 
     int ret;
