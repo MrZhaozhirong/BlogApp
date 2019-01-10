@@ -381,15 +381,16 @@ SyncPlayer* mSyncPlayer;
 JNIEXPORT void JNICALL
 Java_org_zzrblog_ffmp_SyncPlayer_nativeInit(JNIEnv *env, jobject instance)
 {
-    // 0.FFmpeg's av_log output
     av_log_set_callback(ffmpeg_custom_log);
-    // 1.注册组件
     av_register_all();
     avcodec_register_all();
     avformat_network_init();
-
+    // malloc与calloc区别
+    // 1.malloc是以字节为单位，calloc是以item为单位。
+    // 2.malloc需要memset初始化为0，calloc默认初始化为0
     mSyncPlayer = (SyncPlayer*)calloc(1, sizeof(SyncPlayer));
-
+    // SyncPlayer的java对象，需要建立引用 NewGlobalRef，记得DeleteGlobalRef
+    mSyncPlayer->jinstance = (*env)->NewGlobalRef(env, instance);
 }
 
 JNIEXPORT void JNICALL
@@ -491,8 +492,6 @@ Java_org_zzrblog_ffmp_SyncPlayer_nativePrepare(JNIEnv *env, jobject instance,
     ret = alloc_codec_context(mSyncPlayer, audio_stream_idx);
     if(ret < 0) return;
 
-    // SyncPlayer的java对象，需要建立引用 NewGlobalRef，记得DeleteGlobalRef
-    mSyncPlayer->jinstance = (*env)->NewGlobalRef(env, instance);
     // 初始化视频渲染相关 ANativeWindow是NDK对象，不需要NewGlobalRef
     mSyncPlayer->native_window = ANativeWindow_fromSurface(env, jSurface);
     // 初始化音频播放相关 audio_track是java对象，需要NewGlobalRef，记得DeleteGlobalRef
