@@ -74,12 +74,14 @@ public class FFmpegTestActivity extends Activity {
     public void clickOnSyncPlay(@SuppressLint("USELESS") View view) {
         String path = Environment.getExternalStorageDirectory().getPath();
         String input_mp4 = path + "/10s_test.mp4";
-        if(syncPlayer==null) {
-            syncPlayer = new SyncPlayer(FFmpegTestActivity.this);
-            syncPlayer.setMediaSource(input_mp4);
-            syncPlayer.setRender(surfaceView.getHolder().getSurface());
-            syncPlayer.prepare();
+        if(syncPlayer!=null) {
+            syncPlayer.release();
+            syncPlayer = null;
         }
+        syncPlayer = new SyncPlayer(FFmpegTestActivity.this);
+        syncPlayer.setMediaSource(input_mp4);
+        syncPlayer.setRender(surfaceView.getHolder().getSurface());
+        syncPlayer.prepare();
         syncPlayer.play();
     }
 
