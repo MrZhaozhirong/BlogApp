@@ -518,8 +518,9 @@ Java_org_zzrblog_ffmp_SyncPlayer_nativePlay(JNIEnv *env, jobject instance)
 
     mSyncPlayer->stop_thread_avpacket_distributor = 0;
     pthread_create(&(mSyncPlayer->thread_avpacket_distributor), NULL, avpacket_distributor, mSyncPlayer);
-    usleep(1000); // 1000us = 1ms 相当于java.util.concurrent.CountDownLatch
+    usleep(1000); // 1000us = 1ms
     // 意义在于让avpacket_distributor比video_avframe_decoder早点运行。
+    // 不清楚的同学可以学习java.util.concurrent.CountDownLatch的运用，触类旁通。
 
     mSyncPlayer->stop_thread_video_decoder = 0;
     pthread_create(&(mSyncPlayer->thread_video_decoder), NULL, video_avframe_decoder, mSyncPlayer);
