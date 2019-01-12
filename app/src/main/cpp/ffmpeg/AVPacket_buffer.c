@@ -11,7 +11,7 @@ AV_PACKET_BUFFER* alloc_avpacket_buffer(int size)
     pAVPacketBuffer->write_current_position = 0;
     pAVPacketBuffer->read_current_position = 0;
     //数组开辟空间
-    pAVPacketBuffer->avpacket_ptr_array = malloc(sizeof(AVPacket*) * size);
+    pAVPacketBuffer->avpacket_ptr_array = calloc((size_t) size, sizeof(AVPacket*) * size);
     int i;
     for(i=0; i<size; i++){
         pAVPacketBuffer->avpacket_ptr_array[i] = av_packet_alloc();

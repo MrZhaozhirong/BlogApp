@@ -74,17 +74,19 @@ void* avpacket_distributor(void* arg)
     // 不用堆内存空间，因为线程创建的堆内存通过memcopy复制自定义的AVPacket_buffer当中，不高效。
     AVPacket packet; // 栈内存空间
     AVPacket *pkt = &packet; // 指向栈内存空间的指针
-    // (player->stop_thread_avpacket_distributor == 0)
     int video_frame_count = 0;
     int audio_frame_count = 0;
     while (av_read_frame(pFormatContext, pkt) >= 0)
     {
+        if(player->stop_thread_avpacket_distributor != 0)
+            break;
         if (pkt->stream_index == player->video_stream_index)
         {
             AV_PACKET_BUFFER *video_buffer = player->video_avpacket_buffer;
             AVPacket *video_avpacket_buffer_data = get_write_packet(video_buffer);
             //buffer内部堆空间 = 当前栈空间数据，间接赋值。
             *video_avpacket_buffer_data = packet;
+            //memcpy(video_avpacket_buffer_data, packet, sizeof(*packet));
             video_frame_count++;
         }
         if (pkt->stream_index == player->audio_stream_index)
