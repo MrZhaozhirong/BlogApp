@@ -41,7 +41,7 @@ public class FFmpegTestActivity extends Activity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-
+        Log.w(TAG, "FFmpegTestActivity onDestroy ! ");
         if(syncPlayer!=null) {
             syncPlayer.release();
             syncPlayer = null;

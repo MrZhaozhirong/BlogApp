@@ -109,7 +109,7 @@ public class SyncPlayer {
                 .setEncoding(encodingFormat)
                 .setChannelMask(channelConfig)
                 .build();
-        AudioTrack mAudioTrack = new AudioTrack(audioAttributes, audioFormat, bufferSize + 2048, AudioTrack.MODE_STREAM, sessionId);
+        AudioTrack mAudioTrack = new AudioTrack(audioAttributes, audioFormat, bufferSize, AudioTrack.MODE_STREAM, sessionId);
         return mAudioTrack;
     }
 

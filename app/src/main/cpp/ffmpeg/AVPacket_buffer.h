@@ -5,7 +5,7 @@
 #ifndef BLOGAPP_AVPACKET_BUFFER_H
 #define BLOGAPP_AVPACKET_BUFFER_H
 
-#define BUFFER_SIZE 100
+#define BUFFER_SIZE 50
 
 #include "include/libavcodec/avcodec.h"
 

@@ -60,6 +60,7 @@ typedef struct _SyncPlayer {
     pthread_t thread_audio_decoder;
     int stop_thread_audio_decoder;
     AV_PACKET_BUFFER* audio_avpacket_buffer;
+
 } SyncPlayer;
 
 
@@ -91,19 +92,19 @@ void* avpacket_distributor(void* arg)
             video_frame_count++;
             pthread_mutex_unlock(&video_buffer->mutex);
         }
-        if (pkt->stream_index == player->audio_stream_index)
-        {
-            AV_PACKET_BUFFER *audio_buffer = player->audio_avpacket_buffer;
-            pthread_mutex_lock(&audio_buffer->mutex);
-            AVPacket *audio_avpacket_buffer_data = get_write_packet(audio_buffer);
-            //buffer内部堆空间 = 当前栈空间数据，间接赋值。
-            *audio_avpacket_buffer_data = packet;
-            audio_frame_count++;
-            pthread_mutex_unlock(&audio_buffer->mutex);
-        }
+        //if (pkt->stream_index == player->audio_stream_index)
+        //{
+        //    AV_PACKET_BUFFER *audio_buffer = player->audio_avpacket_buffer;
+        //    pthread_mutex_lock(&audio_buffer->mutex);
+        //    AVPacket *audio_avpacket_buffer_data = get_write_packet(audio_buffer);
+        //    //buffer内部堆空间 = 当前栈空间数据，间接赋值。
+        //    *audio_avpacket_buffer_data = packet;
+        //    audio_frame_count++;
+        //    pthread_mutex_unlock(&audio_buffer->mutex);
+        //}
     }
-    LOGD("video_frame_count:"+video_frame_count);
-    LOGD("audio_frame_count:"+audio_frame_count);
+    LOGI("video_frame_count：%d", video_frame_count);
+    LOGI("audio_frame_count：%d", audio_frame_count);
     //av_packet_unref(packet);
     // 不需要在此解引用，应当在解码线程使用之后。
     LOGI("thread_avpacket_distributor exit ...\n");
@@ -173,10 +174,8 @@ void* audio_avframe_decoder(void* arg)
                                       audio_data_byteArray, 0, out_buffer_size);
                 //！！！释放局部引用，要不然会局部引用溢出
                 (*env)->DeleteLocalRef(env,audio_data_byteArray);
-                usleep(1000 * 16);
             }
         }
-
         av_packet_unref(packet);
     }
 
@@ -265,7 +264,6 @@ void* video_avframe_decoder(void* arg)
                 // 释放锁并 swap交换显示内存到屏幕上。
             }
         }
-        // 解除引用
         av_packet_unref(packet);
     }
 
@@ -364,13 +362,13 @@ void initPlayerAVPacketBuffer(SyncPlayer* player)
         free_avpacket_buffer(player->video_avpacket_buffer);
         player->video_avpacket_buffer = NULL; // 防止野指针
     }
-    player->video_avpacket_buffer = alloc_avpacket_buffer(BUFFER_SIZE * 5);
+    player->video_avpacket_buffer = alloc_avpacket_buffer(BUFFER_SIZE*2);
     // 音频的AVPacket的缓冲区
     if(player->audio_avpacket_buffer != NULL) {
         free_avpacket_buffer(player->audio_avpacket_buffer);
         player->audio_avpacket_buffer = NULL; // 防止野指针
     }
-    player->audio_avpacket_buffer = alloc_avpacket_buffer(BUFFER_SIZE * 10);
+    player->audio_avpacket_buffer = alloc_avpacket_buffer(BUFFER_SIZE);
 }
 
 
@@ -435,7 +433,9 @@ Java_org_zzrblog_ffmp_SyncPlayer_nativeRelease(JNIEnv *env, jobject instance)
     }
     free(mSyncPlayer->input_codec_ctx);
     // 释放AVPacket缓冲区
+    LOGD("free audio_avpacket_buffer ");
     free_avpacket_buffer(mSyncPlayer->audio_avpacket_buffer);
+    LOGD("free video_avpacket_buffer ");
     free_avpacket_buffer(mSyncPlayer->video_avpacket_buffer);
     // 释放输入文件上下文
     avformat_close_input(&(mSyncPlayer->input_format_ctx));
@@ -535,8 +535,8 @@ Java_org_zzrblog_ffmp_SyncPlayer_nativePlay(JNIEnv *env, jobject instance)
     mSyncPlayer->stop_thread_video_decoder = 0;
     pthread_create(&(mSyncPlayer->thread_video_decoder), NULL, video_avframe_decoder, mSyncPlayer);
 
-    mSyncPlayer->stop_thread_audio_decoder = 0;
-    pthread_create(&(mSyncPlayer->thread_audio_decoder), NULL, audio_avframe_decoder, mSyncPlayer);
+    //mSyncPlayer->stop_thread_audio_decoder = 0;
+    //pthread_create(&(mSyncPlayer->thread_audio_decoder), NULL, audio_avframe_decoder, mSyncPlayer);
 
     usleep(50000); // 50ms
 }

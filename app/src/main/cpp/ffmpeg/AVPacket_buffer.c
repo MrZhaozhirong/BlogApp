@@ -3,6 +3,7 @@
 //
 #include <pthread.h>
 #include "AVPacket_buffer.h"
+#include "../common/zzr_common.h"
 
 // 创建AVPacket缓冲区
 AV_PACKET_BUFFER* alloc_avpacket_buffer(int size)
@@ -31,6 +32,9 @@ void free_avpacket_buffer(AV_PACKET_BUFFER* pAVPacketBuffer)
         // void av_packet_free(AVPacket **pkt);
         av_packet_free(& (pAVPacketBuffer->avpacket_ptr_array[i]) );
     }
+    // 解除当前条件变量的等待
+    pthread_cond_broadcast(&(pAVPacketBuffer->cond));
+
     pthread_mutex_destroy( & (pAVPacketBuffer->mutex) );
     pthread_cond_destroy( & (pAVPacketBuffer->cond) );
     free(pAVPacketBuffer->avpacket_ptr_array);
@@ -56,10 +60,11 @@ AVPacket* get_write_packet(AV_PACKET_BUFFER * pAVPacketBuffer)
             break;
         }
         //阻塞
+        LOGD("wait AVPacketBuffer next_to_write：%d\n",next_to_write);
         pthread_cond_wait(&(pAVPacketBuffer->cond), &(pAVPacketBuffer->mutex));
     }
     pAVPacketBuffer->write_current_position = next_to_write;
-    //通知
+    // 通知可读
     pthread_cond_broadcast(&(pAVPacketBuffer->cond));
 
     return pAVPacketBuffer->avpacket_ptr_array[current];
@@ -76,8 +81,11 @@ AVPacket* get_read_packet(AV_PACKET_BUFFER * pAVPacketBuffer)
             break;
         }
         //阻塞
+        LOGD("wait AVPacketBuffer next_to_read：%d\n",next_to_read);
         pthread_cond_wait(&(pAVPacketBuffer->cond), &(pAVPacketBuffer->mutex));
     }
     pAVPacketBuffer->read_current_position = next_to_read;
+    // 通知可写
+    pthread_cond_broadcast(&(pAVPacketBuffer->cond));
     return pAVPacketBuffer->avpacket_ptr_array[current];
 }
