@@ -88,25 +88,28 @@ void* avpacket_distributor(void* arg)
             AVPacket *video_avpacket_buffer_data = get_write_packet(video_buffer);
             //buffer内部堆空间 = 当前栈空间数据，间接赋值。
             *video_avpacket_buffer_data = packet;
-            //memcpy(video_avpacket_buffer_data, packet, sizeof(*packet));
             video_frame_count++;
             pthread_mutex_unlock(&video_buffer->mutex);
         }
-        //if (pkt->stream_index == player->audio_stream_index)
-        //{
-        //    AV_PACKET_BUFFER *audio_buffer = player->audio_avpacket_buffer;
-        //    pthread_mutex_lock(&audio_buffer->mutex);
-        //    AVPacket *audio_avpacket_buffer_data = get_write_packet(audio_buffer);
-        //    //buffer内部堆空间 = 当前栈空间数据，间接赋值。
-        //    *audio_avpacket_buffer_data = packet;
-        //    audio_frame_count++;
-        //    pthread_mutex_unlock(&audio_buffer->mutex);
-        //}
+        if (pkt->stream_index == player->audio_stream_index)
+        {
+            AV_PACKET_BUFFER *audio_buffer = player->audio_avpacket_buffer;
+            pthread_mutex_lock(&audio_buffer->mutex);
+            AVPacket *audio_avpacket_buffer_data = get_write_packet(audio_buffer);
+            *audio_avpacket_buffer_data = packet;
+            audio_frame_count++;
+            pthread_mutex_unlock(&audio_buffer->mutex);
+        }
     }
-    LOGI("video_frame_count：%d", video_frame_count);
-    LOGI("audio_frame_count：%d", audio_frame_count);
     //av_packet_unref(packet);
     // 不需要在此解引用，应当在解码线程使用之后。
+    LOGI("video_frame_count：%d", video_frame_count);
+    LOGI("audio_frame_count：%d", audio_frame_count);
+    // 分发线程结束，也就是说AVPacket写操作也结束了。
+    // 我们把AVPacketBuffer->write_current_position+1取反 表示写入已经结束。
+    // 解码线程读取操作进行判断，以便能正确退出线程。
+    player->video_avpacket_buffer->write_current_position = -(player->video_avpacket_buffer->write_current_position+1);
+    player->audio_avpacket_buffer->write_current_position = -(player->audio_avpacket_buffer->write_current_position+1);
     LOGI("thread_avpacket_distributor exit ...\n");
     return 0;
 }
@@ -140,7 +143,7 @@ void* audio_avframe_decoder(void* arg)
         if (ret == AVERROR_EOF){
             av_packet_unref(packet);
             LOGW("audio_decoder avcodec_send_packet：%d\n", ret);
-            break;
+            break; // 跳出 while(player->stop_thread_audio_decoder==0)
         }else if(ret < 0){
             av_packet_unref(packet);
             LOGE("audio_decoder avcodec_send_packet：%d\n", ret);
@@ -150,11 +153,12 @@ void* audio_avframe_decoder(void* arg)
         while(ret >= 0)
         {
             ret = avcodec_receive_frame(audioCodecCtx, frame);
-            if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
+            if (ret == AVERROR(EAGAIN) ) {
                 //LOGD("audio_decoder avcodec_receive_frame：%d\n", ret);
-                break;
-            } else if (ret < 0) {
+                break; // 跳出 while(ret>=0)
+            } else if (ret < 0 || ret == AVERROR_EOF) {
                 LOGW("audio_decoder avcodec_receive_frame：%d\n", AVERROR(ret));
+                av_packet_unref(packet);
                 goto end;  //end处进行资源释放等善后处理
             }
             if (ret >= 0)
@@ -225,7 +229,7 @@ void* video_avframe_decoder(void* arg)
         if (ret == AVERROR_EOF){
             av_packet_unref(packet);
             LOGW("video_decoder avcodec_send_packet：%d\n", ret);
-            break;
+            break; //跳出 while(player->stop_thread_video_decoder == 0)
         }else if(ret < 0){
             av_packet_unref(packet);
             LOGE("video_decoder avcodec_send_packet：%d\n", ret);
@@ -235,12 +239,13 @@ void* video_avframe_decoder(void* arg)
         while(ret >= 0)
         {
             ret = avcodec_receive_frame(videoCodecCtx, yuv_frame);
-            if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF){
+            if (ret == AVERROR(EAGAIN) ){
                 //LOGD("video_decoder avcodec_receive_frame：%d\n", ret);
-                break;
-            }else if (ret < 0) {
+                break; //跳出 while(ret >= 0)
+            }else if (ret < 0 || ret == AVERROR_EOF) {
                 LOGW("video_decoder avcodec_receive_frame：%d\n", AVERROR(ret));
-                goto end;  //end处进行资源释放等善后处理
+                av_packet_unref(packet);
+                goto end;
             }
 
             if (ret >= 0)
@@ -535,8 +540,8 @@ Java_org_zzrblog_ffmp_SyncPlayer_nativePlay(JNIEnv *env, jobject instance)
     mSyncPlayer->stop_thread_video_decoder = 0;
     pthread_create(&(mSyncPlayer->thread_video_decoder), NULL, video_avframe_decoder, mSyncPlayer);
 
-    //mSyncPlayer->stop_thread_audio_decoder = 0;
-    //pthread_create(&(mSyncPlayer->thread_audio_decoder), NULL, audio_avframe_decoder, mSyncPlayer);
+    mSyncPlayer->stop_thread_audio_decoder = 0;
+    pthread_create(&(mSyncPlayer->thread_audio_decoder), NULL, audio_avframe_decoder, mSyncPlayer);
 
     usleep(50000); // 50ms
 }

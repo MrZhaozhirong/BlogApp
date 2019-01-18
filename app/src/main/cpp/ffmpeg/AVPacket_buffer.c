@@ -60,7 +60,7 @@ AVPacket* get_write_packet(AV_PACKET_BUFFER * pAVPacketBuffer)
             break;
         }
         //阻塞
-        LOGD("wait AVPacketBuffer next_to_write：%d\n",next_to_write);
+        //LOGD("wait AVPacketBuffer next_to_write：%d\n",next_to_write);
         pthread_cond_wait(&(pAVPacketBuffer->cond), &(pAVPacketBuffer->mutex));
     }
     pAVPacketBuffer->write_current_position = next_to_write;
