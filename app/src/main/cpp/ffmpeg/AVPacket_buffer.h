@@ -20,9 +20,9 @@ typedef struct _AVPacket_buffer{
     int write_current_position;
     int read_current_position;
 
-    // 互斥锁（为了解决size空间较小的时候，前数据比后数据覆盖）
+    // 互斥锁（为了解决 前数据比后数据覆盖的问题）
     pthread_mutex_t mutex;
-    // 条件变量（为了解决size空间较小的时候，前数据比后数据覆盖）
+    // 条件变量（为了解决 前数据比后数据覆盖的问题）
     pthread_cond_t cond;
 
     //保留字段

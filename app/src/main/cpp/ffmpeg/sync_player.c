@@ -88,8 +88,8 @@ void* avpacket_distributor(void* arg)
             AVPacket *video_avpacket_buffer_data = get_write_packet(video_buffer);
             //buffer内部堆空间 = 当前栈空间数据，间接赋值。
             *video_avpacket_buffer_data = packet;
-            video_frame_count++;
             pthread_mutex_unlock(&video_buffer->mutex);
+            video_frame_count++;
         }
         if (pkt->stream_index == player->audio_stream_index)
         {
@@ -97,8 +97,8 @@ void* avpacket_distributor(void* arg)
             pthread_mutex_lock(&audio_buffer->mutex);
             AVPacket *audio_avpacket_buffer_data = get_write_packet(audio_buffer);
             *audio_avpacket_buffer_data = packet;
-            audio_frame_count++;
             pthread_mutex_unlock(&audio_buffer->mutex);
+            audio_frame_count++;
         }
     }
     //av_packet_unref(packet);

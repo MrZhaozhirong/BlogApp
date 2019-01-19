@@ -59,7 +59,7 @@ AVPacket* get_write_packet(AV_PACKET_BUFFER * pAVPacketBuffer)
         if(next_to_write != pAVPacketBuffer->read_current_position){
             break;
         }
-        //阻塞
+        //阻塞 等待 get_read_packet 的 broadcast
         //LOGD("wait AVPacketBuffer next_to_write：%d\n",next_to_write);
         pthread_cond_wait(&(pAVPacketBuffer->cond), &(pAVPacketBuffer->mutex));
     }
@@ -80,8 +80,8 @@ AVPacket* get_read_packet(AV_PACKET_BUFFER * pAVPacketBuffer)
         if(next_to_read != pAVPacketBuffer->write_current_position){
             break;
         }
-        //阻塞
-        LOGD("wait AVPacketBuffer next_to_read：%d\n",next_to_read);
+        //阻塞 等待 get_write_packet 的 broadcast
+        //LOGD("wait AVPacketBuffer next_to_read：%d\n",next_to_read);
         pthread_cond_wait(&(pAVPacketBuffer->cond), &(pAVPacketBuffer->mutex));
     }
     pAVPacketBuffer->read_current_position = next_to_read;
