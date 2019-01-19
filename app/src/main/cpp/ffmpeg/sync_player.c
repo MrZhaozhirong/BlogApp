@@ -106,7 +106,7 @@ void* avpacket_distributor(void* arg)
     LOGI("video_frame_count：%d", video_frame_count);
     LOGI("audio_frame_count：%d", audio_frame_count);
     // 分发线程结束，也就是说AVPacket写操作也结束了。
-    // 我们把AVPacketBuffer->write_current_position+1取反 表示写入已经结束。
+    // 我们把AVPacketBuffer->write_current_position+1再取反 表示写入已经结束。
     // 解码线程读取操作进行判断，以便能正确退出线程。
     player->video_avpacket_buffer->write_current_position = -(player->video_avpacket_buffer->write_current_position+1);
     player->audio_avpacket_buffer->write_current_position = -(player->audio_avpacket_buffer->write_current_position+1);
