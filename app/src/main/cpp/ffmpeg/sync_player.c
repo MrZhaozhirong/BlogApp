@@ -70,6 +70,7 @@ typedef struct _SyncPlayer {
 void* avpacket_distributor(void* arg)
 {
     SyncPlayer *player = (SyncPlayer *) arg;
+
     AVFormatContext *pFormatContext = player->input_format_ctx;
     //AVPacket* packet = av_packet_alloc();
     // 不用堆内存空间，因为线程创建的堆内存通过memcopy复制自定义的AVPacket_buffer当中，不高效。
@@ -81,13 +82,14 @@ void* avpacket_distributor(void* arg)
     {
         if(player->stop_thread_avpacket_distributor != 0)
             break;
-        if (pkt->stream_index == player->video_stream_index)
+        if (pkt->stream_index==player->video_stream_index)
         {
             AV_PACKET_BUFFER *video_buffer = player->video_avpacket_buffer;
             pthread_mutex_lock(&video_buffer->mutex);
             AVPacket *video_avpacket_buffer_data = get_write_packet(video_buffer);
             //buffer内部堆空间 = 当前栈空间数据，间接赋值。
             *video_avpacket_buffer_data = packet;
+            usleep(100);
             pthread_mutex_unlock(&video_buffer->mutex);
             video_frame_count++;
         }
@@ -126,6 +128,10 @@ void* audio_avframe_decoder(void* arg)
     AVCodecContext* audioCodecCtx = player->input_codec_ctx[player->audio_stream_index];
     AV_PACKET_BUFFER* audioAVPacketButter = player->audio_avpacket_buffer;
 
+    AVStream *audioStream = player->input_format_ctx->streams[player->audio_stream_index];
+    int64_t audioDuration = (int64_t) (audioStream->duration * av_q2d(audioStream->time_base));
+    LOGI("audio steam Expect Duration : %lld\n",audioDuration);
+
     AVFrame *frame = av_frame_alloc();
     //16bit 44100 PCM 数据的实际内存空间。
     uint8_t *out_buffer = (uint8_t *)av_malloc(MAX_AUDIO_FRAME_SIZE);
@@ -133,6 +139,7 @@ void* audio_avframe_decoder(void* arg)
     (*env)->CallVoidMethod(env, player->audio_track, player->audio_track_play_mid);
 
     int ret;
+    int64_t pts;
     while(player->stop_thread_audio_decoder == 0)
     {
         pthread_mutex_lock(&audioAVPacketButter->mutex);
@@ -157,10 +164,18 @@ void* audio_avframe_decoder(void* arg)
                 //LOGD("audio_decoder avcodec_receive_frame：%d\n", ret);
                 break; // 跳出 while(ret>=0)
             } else if (ret < 0 || ret == AVERROR_EOF) {
-                LOGW("audio_decoder avcodec_receive_frame：%d\n", AVERROR(ret));
+                LOGW("audio_decoder avcodec_receive_frame：%d %s\n", AVERROR(ret), av_err2str(ret));
                 av_packet_unref(packet);
                 goto end;  //end处进行资源释放等善后处理
             }
+
+            // !test start
+            if ((pts = av_frame_get_best_effort_timestamp(frame)) == AV_NOPTS_VALUE)
+                pts = 0;
+            pts *= av_q2d(audioStream->time_base);
+            LOGD("audio current frame PTS : %lld\n",pts);
+            // !test end
+
             if (ret >= 0)
             {
                 swr_convert(player->swr_ctx, &out_buffer, MAX_AUDIO_FRAME_SIZE, (const uint8_t **) frame->data, frame->nb_samples);
@@ -197,6 +212,10 @@ void* video_avframe_decoder(void* arg)
     AVCodecContext* videoCodecCtx = player->input_codec_ctx[player->video_stream_index];
     AV_PACKET_BUFFER* videoAVPacketButter = player->video_avpacket_buffer;
 
+    AVStream *videoStream = player->input_format_ctx->streams[player->video_stream_index];
+    int64_t steamDuration = (int64_t) (videoStream->duration * av_q2d(videoStream->time_base));
+    LOGI("video steam Expect Duration : %lld\n",steamDuration);
+
     AVFrame *yuv_frame = av_frame_alloc();
     AVFrame *rgb_frame = av_frame_alloc();
 
@@ -219,6 +238,7 @@ void* video_avframe_decoder(void* arg)
     // 绘制时的缓冲区
     ANativeWindow_Buffer nativeWinBuffer;
     int ret;
+    int64_t pts;
     while(player->stop_thread_video_decoder == 0)
     {
         pthread_mutex_lock(&videoAVPacketButter->mutex);
@@ -243,10 +263,17 @@ void* video_avframe_decoder(void* arg)
                 //LOGD("video_decoder avcodec_receive_frame：%d\n", ret);
                 break; //跳出 while(ret >= 0)
             }else if (ret < 0 || ret == AVERROR_EOF) {
-                LOGW("video_decoder avcodec_receive_frame：%d\n", AVERROR(ret));
+                LOGW("video_decoder avcodec_receive_frame：%d %s\n", AVERROR(ret),av_err2str(ret));
                 av_packet_unref(packet);
                 goto end;
             }
+
+            // !test start
+            if ((pts = av_frame_get_best_effort_timestamp(yuv_frame)) == AV_NOPTS_VALUE)
+                pts = 0;
+            pts *= av_q2d(videoStream->time_base);
+            LOGI("video current frame PTS : %lld\n",pts);
+            // !test end
 
             if (ret >= 0)
             {
@@ -271,6 +298,7 @@ void* video_avframe_decoder(void* arg)
         }
         av_packet_unref(packet);
     }
+
 
 end:
     av_frame_free(&yuv_frame);
@@ -417,6 +445,7 @@ Java_org_zzrblog_ffmp_SyncPlayer_nativeRelease(JNIEnv *env, jobject instance)
     // 暂停工作线程
     mSyncPlayer->stop_thread_avpacket_distributor = 1;
     pthread_join(mSyncPlayer->thread_avpacket_distributor, NULL);
+
     mSyncPlayer->stop_thread_video_decoder = 1;
     pthread_join(mSyncPlayer->thread_video_decoder, NULL);
     mSyncPlayer->stop_thread_audio_decoder = 1;
@@ -533,6 +562,7 @@ Java_org_zzrblog_ffmp_SyncPlayer_nativePlay(JNIEnv *env, jobject instance)
 
     mSyncPlayer->stop_thread_avpacket_distributor = 0;
     pthread_create(&(mSyncPlayer->thread_avpacket_distributor), NULL, avpacket_distributor, mSyncPlayer);
+
     usleep(1000); // 1000us = 1ms
     // 意义在于让avpacket_distributor比video_avframe_decoder早点运行。
     // 不清楚的同学可以学习java.util.concurrent.CountDownLatch的运用，触类旁通。

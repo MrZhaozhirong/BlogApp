@@ -5,6 +5,7 @@ import android.media.AudioAttributes;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
+import android.util.Log;
 import android.view.Surface;
 
 /**
@@ -100,6 +101,8 @@ public class SyncPlayer {
 
         AudioManager mAudioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
         int bufferSize = AudioTrack.getMinBufferSize(sampleRateInHz, channelConfig, encodingFormat);
+        Log.d("JSyncPlayer", "AudioTrack bufferSize:"+bufferSize);
+        Log.d("JSyncPlayer", "AudioTrack sampleRateInHz:"+sampleRateInHz);
         int sessionId = mAudioManager.generateAudioSessionId();
         AudioAttributes audioAttributes = new AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_MEDIA)
