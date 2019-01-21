@@ -117,7 +117,14 @@ void* avpacket_distributor(void* arg)
 }
 
 
+
+/* no AV sync correction is done if below the minimum AV sync threshold */
+#define AV_SYNC_THRESHOLD_MIN 0.04
+/* AV sync correction is done if above the maximum AV sync threshold */
+#define AV_SYNC_THRESHOLD_MAX 0.1
+
 double audioClock;
+double videoClock;
 
 void* audio_avframe_decoder(void* arg)
 {
@@ -143,6 +150,7 @@ void* audio_avframe_decoder(void* arg)
 
     int ret;
     int64_t pts;
+
     while(player->stop_thread_audio_decoder == 0)
     {
         pthread_mutex_lock(&audioAVPacketButter->mutex);
@@ -160,6 +168,9 @@ void* audio_avframe_decoder(void* arg)
             continue;
         }
 
+        //audioClock = packet->pts * av_q2d(audioStream->time_base);
+        //LOGD("current audioClock : %f\n", audioClock);
+
         while(ret >= 0)
         {
             ret = avcodec_receive_frame(audioCodecCtx, frame);
@@ -171,13 +182,6 @@ void* audio_avframe_decoder(void* arg)
                 av_packet_unref(packet);
                 goto end;  //end处进行资源释放等善后处理
             }
-
-            // !test start
-            if ((pts = av_frame_get_best_effort_timestamp(frame)) == AV_NOPTS_VALUE)
-                pts = 0;
-            //pts *= av_q2d(audioStream->time_base);
-            LOGD("audio current frame PTS : %lld\n",pts);
-            // !test end
 
             if (ret >= 0)
             {
@@ -240,8 +244,10 @@ void* video_avframe_decoder(void* arg)
     ANativeWindow_setBuffersGeometry(nativeWindow, videoCodecCtx->width, videoCodecCtx->height, WINDOW_FORMAT_RGBA_8888);
     // 绘制时的缓冲区
     ANativeWindow_Buffer nativeWinBuffer;
+
     int ret;
     int64_t pts;
+
     while(player->stop_thread_video_decoder == 0)
     {
         pthread_mutex_lock(&videoAVPacketButter->mutex);
@@ -259,6 +265,15 @@ void* video_avframe_decoder(void* arg)
             continue;
         }
 
+        videoClock = packet->pts * av_q2d(videoStream->time_base);
+        LOGD("current videoClock : %f\n", videoClock);
+        //if(fabs(videoClock - audioClock) > AV_SYNC_THRESHOLD_MIN )
+        //{   // 丢帧处理
+        //    av_packet_unref(packet);
+        //    LOGI("drop the video frame !!! \n");
+        //    continue;
+        //}
+
         while(ret >= 0)
         {
             ret = avcodec_receive_frame(videoCodecCtx, yuv_frame);
@@ -272,10 +287,10 @@ void* video_avframe_decoder(void* arg)
             }
 
             // !test start
-            //if ((pts = av_frame_get_best_effort_timestamp(yuv_frame)) == AV_NOPTS_VALUE)
-            //    pts = 0;
-            //pts *= av_q2d(videoStream->time_base);
-            //LOGI("video current frame PTS : %lld\n",pts);
+            if ((pts = av_frame_get_best_effort_timestamp(yuv_frame)) == AV_NOPTS_VALUE)
+                pts = 0;
+            pts *= av_q2d(videoStream->time_base);
+            LOGI("video current frame PTS : %lld\n",pts);
             // !test end
 
             if (ret >= 0)
