@@ -116,6 +116,9 @@ void* avpacket_distributor(void* arg)
     return 0;
 }
 
+
+double audioClock;
+
 void* audio_avframe_decoder(void* arg)
 {
     JNIEnv *env = NULL;
@@ -130,7 +133,7 @@ void* audio_avframe_decoder(void* arg)
 
     AVStream *audioStream = player->input_format_ctx->streams[player->audio_stream_index];
     int64_t audioDuration = (int64_t) (audioStream->duration * av_q2d(audioStream->time_base));
-    LOGI("audio steam Expect Duration : %lld\n",audioDuration);
+    LOGI("audio steam time_base : %d/%d \n",audioStream->time_base.num, audioStream->time_base.den);
 
     AVFrame *frame = av_frame_alloc();
     //16bit 44100 PCM 数据的实际内存空间。
@@ -172,7 +175,7 @@ void* audio_avframe_decoder(void* arg)
             // !test start
             if ((pts = av_frame_get_best_effort_timestamp(frame)) == AV_NOPTS_VALUE)
                 pts = 0;
-            pts *= av_q2d(audioStream->time_base);
+            //pts *= av_q2d(audioStream->time_base);
             LOGD("audio current frame PTS : %lld\n",pts);
             // !test end
 
@@ -214,7 +217,7 @@ void* video_avframe_decoder(void* arg)
 
     AVStream *videoStream = player->input_format_ctx->streams[player->video_stream_index];
     int64_t steamDuration = (int64_t) (videoStream->duration * av_q2d(videoStream->time_base));
-    LOGI("video steam Expect Duration : %lld\n",steamDuration);
+    LOGI("video steam time_base : %d/%d \n",videoStream->time_base.num, videoStream->time_base.den);
 
     AVFrame *yuv_frame = av_frame_alloc();
     AVFrame *rgb_frame = av_frame_alloc();
@@ -269,10 +272,10 @@ void* video_avframe_decoder(void* arg)
             }
 
             // !test start
-            if ((pts = av_frame_get_best_effort_timestamp(yuv_frame)) == AV_NOPTS_VALUE)
-                pts = 0;
-            pts *= av_q2d(videoStream->time_base);
-            LOGI("video current frame PTS : %lld\n",pts);
+            //if ((pts = av_frame_get_best_effort_timestamp(yuv_frame)) == AV_NOPTS_VALUE)
+            //    pts = 0;
+            //pts *= av_q2d(videoStream->time_base);
+            //LOGI("video current frame PTS : %lld\n",pts);
             // !test end
 
             if (ret >= 0)
