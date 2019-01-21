@@ -54,7 +54,7 @@ AVPacket* get_write_packet(AV_PACKET_BUFFER * pAVPacketBuffer)
     int next_to_write;
     while(1) {
         //下一个要读的位置等于下一个要写的，等我写完，在读
-        //不等于，就继续
+        //不等于，就跳出死循环，继续正常逻辑
         next_to_write = get_next(pAVPacketBuffer,current);
         if(next_to_write != pAVPacketBuffer->read_current_position){
             break;
