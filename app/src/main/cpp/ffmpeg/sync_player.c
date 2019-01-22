@@ -117,8 +117,7 @@ void* avpacket_distributor(void* arg)
 
 
 
-#define AV_SYNC_THRESHOLD_AUDIO 0.04
-#define AV_SYNC_THRESHOLD_VIDEO 0.1
+
 #define AV_SYNC_THRESHOLD 0.05
 
 double audioClock;
