@@ -117,10 +117,8 @@ void* avpacket_distributor(void* arg)
 
 
 
-/* no AV sync correction is done if below the minimum AV sync threshold */
-#define AV_SYNC_THRESHOLD_MIN 0.02
-/* AV sync correction is done if above the maximum AV sync threshold */
-#define AV_SYNC_THRESHOLD_MAX 0.1
+#define AV_SYNC_THRESHOLD_AUDIO 0.04
+#define AV_SYNC_THRESHOLD_VIDEO 0.065
 
 double audioClock;
 double videoClock;
@@ -203,7 +201,7 @@ void* audio_avframe_decoder(void* arg)
                 memcpy(fp_AudioDataArray, out_buffer, (size_t) out_buffer_size);
                 (*env)->ReleaseByteArrayElements(env, audio_data_byteArray, fp_AudioDataArray,0);
                 // AudioTrack.write PCM数据
-                while( (audioClock - videoClock) > AV_SYNC_THRESHOLD_MIN)
+                while(fabs(audioClock-videoClock) > AV_SYNC_THRESHOLD_AUDIO)
                 {
                     (*env)->CallIntMethod(env,player->audio_track,player->audio_track_write_mid,
                                           audio_data_byteArray, 0, out_buffer_size);
@@ -306,6 +304,8 @@ void* video_avframe_decoder(void* arg)
             videoClock = yuv_frame->pts * av_q2d(videoStream->time_base);
             //LOGD(" current videoClock : %f\n", videoClock);
 
+            if(fabs(audioClock-videoClock) > AV_SYNC_THRESHOLD_VIDEO)
+                continue;
             if (ret >= 0)
             {
                 //sws_scale(sws_ctx,
