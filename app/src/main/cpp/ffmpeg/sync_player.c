@@ -205,10 +205,10 @@ void* audio_avframe_decoder(void* arg)
                 (*env)->CallIntMethod(env,player->audio_track,player->audio_track_write_mid,
                                       audio_data_byteArray, 0, out_buffer_size);
                 if(fabs(audioClock-videoClock) > AV_SYNC_THRESHOLD)
-                {   // 重复填充PCM + usleep延迟等待
+                {   // 再次填充PCM + usleep延迟等待
                     (*env)->CallIntMethod(env,player->audio_track,player->audio_track_write_mid,
                                           audio_data_byteArray, 0, out_buffer_size);
-                    usleep(15000); // 15ms
+                    usleep(15000); // 等待时间其实还需要更好的通过pts计算出来。
                 }
                 //！！！释放局部引用，要不然会局部引用溢出
                 (*env)->DeleteLocalRef(env,audio_data_byteArray);
