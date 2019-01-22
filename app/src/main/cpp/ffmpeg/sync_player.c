@@ -89,7 +89,6 @@ void* avpacket_distributor(void* arg)
             AVPacket *video_avpacket_buffer_data = get_write_packet(video_buffer);
             //buffer内部堆空间 = 当前栈空间数据，间接赋值。
             *video_avpacket_buffer_data = packet;
-            usleep(100);
             pthread_mutex_unlock(&video_buffer->mutex);
             video_frame_count++;
         }
@@ -119,7 +118,7 @@ void* avpacket_distributor(void* arg)
 
 
 /* no AV sync correction is done if below the minimum AV sync threshold */
-#define AV_SYNC_THRESHOLD_MIN 0.04
+#define AV_SYNC_THRESHOLD_MIN 0.02
 /* AV sync correction is done if above the maximum AV sync threshold */
 #define AV_SYNC_THRESHOLD_MAX 0.1
 
@@ -168,9 +167,6 @@ void* audio_avframe_decoder(void* arg)
             continue;
         }
 
-        //audioClock = packet->pts * av_q2d(audioStream->time_base);
-        //LOGD("current audioClock : %f\n", audioClock);
-
         while(ret >= 0)
         {
             ret = avcodec_receive_frame(audioCodecCtx, frame);
@@ -182,6 +178,17 @@ void* audio_avframe_decoder(void* arg)
                 av_packet_unref(packet);
                 goto end;  //end处进行资源释放等善后处理
             }
+
+            // !test start
+            //if ((pts = av_frame_get_best_effort_timestamp(frame)) == AV_NOPTS_VALUE)
+            //    pts = 0;
+            //LOGI("audio current frame PTS : %lld\n",pts);
+            //pts *= av_q2d(audioStream->time_base);
+            //LOGI("audio current frame PTS : %lld\n",pts);
+            // !test end
+
+            audioClock = frame->pts * av_q2d(audioStream->time_base);
+            //LOGD(" current audioClock : %f\n", audioClock);
 
             if (ret >= 0)
             {
@@ -196,8 +203,11 @@ void* audio_avframe_decoder(void* arg)
                 memcpy(fp_AudioDataArray, out_buffer, (size_t) out_buffer_size);
                 (*env)->ReleaseByteArrayElements(env, audio_data_byteArray, fp_AudioDataArray,0);
                 // AudioTrack.write PCM数据
-                (*env)->CallIntMethod(env,player->audio_track,player->audio_track_write_mid,
-                                      audio_data_byteArray, 0, out_buffer_size);
+                while( (audioClock - videoClock) > AV_SYNC_THRESHOLD_MIN)
+                {
+                    (*env)->CallIntMethod(env,player->audio_track,player->audio_track_write_mid,
+                                          audio_data_byteArray, 0, out_buffer_size);
+                }
                 //！！！释放局部引用，要不然会局部引用溢出
                 (*env)->DeleteLocalRef(env,audio_data_byteArray);
             }
@@ -247,14 +257,22 @@ void* video_avframe_decoder(void* arg)
 
     int ret;
     int64_t pts;
+    long start;
+    int count = 0;
 
     while(player->stop_thread_video_decoder == 0)
     {
+        count++;
+        start = clock();
+        LOGD("video decoder %d round start at %ld ...\n", count, start/1000);
         pthread_mutex_lock(&videoAVPacketButter->mutex);
         AVPacket* packet = get_read_packet(videoAVPacketButter);
         pthread_mutex_unlock(&videoAVPacketButter->mutex);
+        LOGI("video get_read_packet at %ld \n", clock()-start);
+
         //AVPacket->AVFrame
         ret = avcodec_send_packet(videoCodecCtx, packet);
+        LOGI("video avcodec_send_packet at %ld \n", clock()-start);
         if (ret == AVERROR_EOF){
             av_packet_unref(packet);
             LOGW("video_decoder avcodec_send_packet：%d\n", ret);
@@ -264,15 +282,6 @@ void* video_avframe_decoder(void* arg)
             LOGE("video_decoder avcodec_send_packet：%d\n", ret);
             continue;
         }
-
-        videoClock = packet->pts * av_q2d(videoStream->time_base);
-        LOGD("current videoClock : %f\n", videoClock);
-        //if(fabs(videoClock - audioClock) > AV_SYNC_THRESHOLD_MIN )
-        //{   // 丢帧处理
-        //    av_packet_unref(packet);
-        //    LOGI("drop the video frame !!! \n");
-        //    continue;
-        //}
 
         while(ret >= 0)
         {
@@ -285,20 +294,24 @@ void* video_avframe_decoder(void* arg)
                 av_packet_unref(packet);
                 goto end;
             }
+            LOGI("video avcodec_receive_frame at %ld \n", clock()-start);
 
             // !test start
-            if ((pts = av_frame_get_best_effort_timestamp(yuv_frame)) == AV_NOPTS_VALUE)
-                pts = 0;
-            pts *= av_q2d(videoStream->time_base);
-            LOGI("video current frame PTS : %lld\n",pts);
+            //if ((pts = av_frame_get_best_effort_timestamp(yuv_frame)) == AV_NOPTS_VALUE)
+            //    pts = 0;
+            //LOGD("video current frame PTS : %lld\n",pts);
+            //pts *= av_q2d(videoStream->time_base);
+            //LOGD("video current frame PTS : %lld\n",pts);
             // !test end
+            videoClock = yuv_frame->pts * av_q2d(videoStream->time_base);
+            //LOGD(" current videoClock : %f\n", videoClock);
 
             if (ret >= 0)
             {
                 //sws_scale(sws_ctx,
                 //          (const uint8_t* const*)yuv_frame->data, yuv_frame->linesize, 0, yuv_frame->height,
                 //          sws_yuv_frame->data, sws_yuv_frame->linesize);
-
+                LOGI("video prepare draw at %ld \n", clock()-start);
                 ANativeWindow_lock(nativeWindow, &nativeWinBuffer, NULL);
                 // 上锁并关联 ANativeWindow + ANativeWindow_Buffer
                 av_image_fill_arrays(rgb_frame->data, rgb_frame->linesize, nativeWinBuffer.bits,
@@ -312,9 +325,12 @@ void* video_avframe_decoder(void* arg)
                 // yuv.AVFrame 转 rgb.AVFrame
                 ANativeWindow_unlockAndPost(nativeWindow);
                 // 释放锁并 swap交换显示内存到屏幕上。
+                LOGI("video finish draw at %ld \n", clock()-start);
             }
         }
         av_packet_unref(packet);
+        LOGD("video decoder %d round end at %ld ...\n", count, (clock()-start)/1000);
+        LOGD("-------------------------------------\n");
     }
 
 
