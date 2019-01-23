@@ -237,7 +237,7 @@ void* video_avframe_decoder(void* arg)
     AVFrame *yuv_frame = av_frame_alloc();
     AVFrame *rgb_frame = av_frame_alloc();
 
-    //用于 缩放
+    //用于 缩放/转换格式
     //AVFrame *sws_yuv_frame = av_frame_alloc();
     //struct SwsContext *sws_ctx = sws_getContext(
     //        videoCodecCtx->width, videoCodecCtx->height, videoCodecCtx->pix_fmt,
