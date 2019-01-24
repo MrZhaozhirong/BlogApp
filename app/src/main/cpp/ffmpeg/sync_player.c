@@ -336,7 +336,6 @@ void* video_avframe_decoder(void* arg)
         LOGD("-------------------------------------\n");
     }
 
-
 end:
     av_frame_free(&yuv_frame);
     av_frame_free(&rgb_frame);
