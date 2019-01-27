@@ -257,7 +257,7 @@ void* video_avframe_decoder(void* arg)
     ANativeWindow_Buffer nativeWinBuffer;
 
     int ret;
-    int64_t pts ;
+    //int64_t pts;
     long start;
     int count = 0;
 
