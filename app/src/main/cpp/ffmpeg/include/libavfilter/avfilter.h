@@ -37,17 +37,17 @@
 
 #include <stddef.h>
 
-#include "libavutil/attributes.h"
-#include "libavutil/avutil.h"
-#include "libavutil/buffer.h"
-#include "libavutil/dict.h"
-#include "libavutil/frame.h"
-#include "libavutil/log.h"
-#include "libavutil/samplefmt.h"
-#include "libavutil/pixfmt.h"
-#include "libavutil/rational.h"
+#include "../libavutil/attributes.h"
+#include "../libavutil/avutil.h"
+#include "../libavutil/buffer.h"
+#include "../libavutil/dict.h"
+#include "../libavutil/frame.h"
+#include "../libavutil/log.h"
+#include "../libavutil/samplefmt.h"
+#include "../libavutil/pixfmt.h"
+#include "../libavutil/rational.h"
 
-#include "libavfilter/version.h"
+#include "../libavfilter/version.h"
 
 /**
  * Return the LIBAVFILTER_VERSION_INT constant.
