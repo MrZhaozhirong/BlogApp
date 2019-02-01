@@ -257,7 +257,7 @@ void* video_avframe_decoder(void* arg)
     ANativeWindow_Buffer nativeWinBuffer;
 
     int ret;
-    int64_t pts;
+    //int64_t pts;
     long start;
     int count = 0;
 
@@ -325,6 +325,7 @@ void* video_avframe_decoder(void* arg)
                            yuv_frame->data[1], yuv_frame->linesize[1],
                            rgb_frame->data[0], rgb_frame->linesize[0],
                            videoCodecCtx->width, videoCodecCtx->height);
+                LOGI("video I420ToARGB at %ld \n", clock()-start);
                 // yuv.AVFrame 转 rgb.AVFrame
                 ANativeWindow_unlockAndPost(nativeWindow);
                 // 释放锁并 swap交换显示内存到屏幕上。
@@ -332,7 +333,7 @@ void* video_avframe_decoder(void* arg)
             }
         }
         av_packet_unref(packet);
-        LOGD("video decoder %d round end at %ld ...\n", count, (clock()-start)/1000);
+        LOGD("video decoder %d round end at %ld ...\n", count, (clock()-start));
         LOGD("-------------------------------------\n");
     }
 

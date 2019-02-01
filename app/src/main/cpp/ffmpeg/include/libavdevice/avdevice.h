@@ -45,10 +45,10 @@
  * @{
  */
 
-#include "libavutil/log.h"
-#include "libavutil/opt.h"
-#include "libavutil/dict.h"
-#include "libavformat/avformat.h"
+#include "../libavutil/log.h"
+#include "../libavutil/opt.h"
+#include "../libavutil/dict.h"
+#include "../libavformat/avformat.h"
 
 /**
  * Return the LIBAVDEVICE_VERSION_INT constant.

@@ -31,7 +31,7 @@
  */
 
 #include <stdint.h>
-#include "libavutil/attributes.h"
+#include "../libavutil/attributes.h"
 #include "version.h"
 
 #if FF_API_STRUCT_VAAPI_CONTEXT
