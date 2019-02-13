@@ -7,6 +7,9 @@ import android.content.pm.PackageManager;
 import android.graphics.PixelFormat;
 import android.graphics.Point;
 import android.hardware.Camera;
+import android.media.AudioFormat;
+import android.media.AudioRecord;
+import android.media.MediaRecorder;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.annotation.NonNull;
@@ -32,17 +35,17 @@ import java.io.File;
 
 public class FFmpegTestActivity extends Activity implements ViewTreeObserver.OnGlobalLayoutListener {
 
+    private static final String[] NEEDED_PERMISSIONS = new String[]{
+            Manifest.permission.CAMERA,
+            Manifest.permission.READ_PHONE_STATE,
+            Manifest.permission.RECORD_AUDIO
+    };
 
     private static final String TAG = "FFmpegTest";
     // ffmpeg解码+音视频同步
     private SurfaceView surfaceView;
     private ZzrFFPlayer ffPlayer;
     private SyncPlayer  syncPlayer;
-    // ffmpeg编码+原生摄像头视频音频采集+推流
-    private SurfaceView cameraView;
-    private Integer cameraID = Camera.CameraInfo.CAMERA_FACING_FRONT;
-    private CameraHelper cameraHelper;
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -160,10 +163,24 @@ public class FFmpegTestActivity extends Activity implements ViewTreeObserver.OnG
 
 
 
-    private static final String[] NEEDED_PERMISSIONS = new String[]{
-            Manifest.permission.CAMERA,
-            Manifest.permission.READ_PHONE_STATE
-    };
+
+
+    // ffmpeg编码+原生摄像头视频音频采集+推流
+    private SurfaceView cameraView;
+    private Integer cameraID = Camera.CameraInfo.CAMERA_FACING_FRONT;
+    private CameraHelper cameraHelper;
+
+    @Override
+    public void onGlobalLayout() {
+        cameraView.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+        if (!checkPermissions(NEEDED_PERMISSIONS)) {
+            ActivityCompat.requestPermissions(this, NEEDED_PERMISSIONS, 0x1234);
+        } else {
+            initCamera();
+            initRecordAudio();
+        }
+    }
+
     private boolean checkPermissions(String[] neededPermissions) {
         if (neededPermissions == null || neededPermissions.length == 0) {
             return true;
@@ -185,21 +202,12 @@ public class FFmpegTestActivity extends Activity implements ViewTreeObserver.OnG
             }
             if (isAllGranted) {
                 initCamera();
+                initRecordAudio();
             } else {
                 Toast.makeText(this.getApplicationContext(),
-                        "Need to allow Camera, Phone State, Storage in Settings->Apps.",
+                        "Need to allow Camera, Phone State, Record Audio in Settings->Apps.",
                         Toast.LENGTH_SHORT).show();
             }
-        }
-    }
-
-    @Override
-    public void onGlobalLayout() {
-        cameraView.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-        if (!checkPermissions(NEEDED_PERMISSIONS)) {
-            ActivityCompat.requestPermissions(this, NEEDED_PERMISSIONS, 0x1234);
-        } else {
-            initCamera();
         }
     }
 
@@ -245,9 +253,56 @@ public class FFmpegTestActivity extends Activity implements ViewTreeObserver.OnG
         cameraHelper.init();
     }
 
-    public void clickOnOpenCamera(@SuppressLint("USELESS") View view) {
+    private int audioRecordChannel = 1;
+    private int sampleRateInHz = 44100;
+    private int minBufferSize;
+    private boolean isAudioRecord;
+    private AudioRecord audioRecord;
+
+    private void initRecordAudio() {
+        // 单声道 44100
+        int channelConfig = audioRecordChannel == 1 ?
+                AudioFormat.CHANNEL_IN_MONO : AudioFormat.CHANNEL_IN_STEREO;
+        minBufferSize = AudioRecord.getMinBufferSize(sampleRateInHz, channelConfig, AudioFormat.ENCODING_PCM_16BIT);
+        audioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC,
+                sampleRateInHz, channelConfig,
+                AudioFormat.ENCODING_PCM_16BIT, minBufferSize);
+        //启动录音子线程
+        isAudioRecord = true;
+        new Thread(new AudioRecordTask()).start();
+    }
+
+    private class AudioRecordTask implements Runnable{
+
+        @Override
+        public void run() {
+            //开始录音
+            audioRecord.startRecording();
+
+            while(isAudioRecord){
+                //通过AudioRecord不断读取音频数据
+                byte[] buffer = new byte[minBufferSize];
+                //ByteBuffer byteBuffer = ByteBuffer.allocateDirect(minBufferSize);
+                int len = audioRecord.read(buffer, 0, buffer.length);
+                if(len > 0){
+                    Log.d(TAG, "audioRecord.read "+buffer.length);
+                }
+            }
+        }
+
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
         if(cameraHelper!=null) {
-            cameraHelper.start();
+            cameraHelper.release();
+            cameraHelper = null;
+        }
+        isAudioRecord = false;
+        if(audioRecord!=null) {
+            audioRecord.release();
+            audioRecord = null;
         }
     }
 }
