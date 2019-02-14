@@ -82,8 +82,9 @@
         <Button
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:onClick="clickOnFFmpegTest"
-            android:text="FFMPEG"/>
+            android:textAllCaps="false"
+            android:text="JavaVM->env"
+            android:onClick="clickOnPThreadEnvTest"/>
     </LinearLayout>
 
     <LinearLayout
@@ -92,9 +93,13 @@
         <Button
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textAllCaps="false"
-            android:text="JavaVM->env测试"
-            android:onClick="clickOnPThreadEnvTest"/>
+            android:onClick="clickOnFFmpDecoderTest"
+            android:text="FFMPEG解码"/>
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:onClick="clickOnFFmpEncoderTest"
+            android:text="FFMPEG编码"/>
     </LinearLayout>
 
 </LinearLayout>

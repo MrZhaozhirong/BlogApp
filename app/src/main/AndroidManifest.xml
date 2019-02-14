@@ -35,7 +35,8 @@
         <activity android:name="org.zzrblog.fmod.FmodActivity" />
         <activity android:name="org.zzrblog.fmod.EffectActivity" />
 
-        <activity android:name="org.zzrblog.ffmp.FFmpegTestActivity" />
+        <activity android:name="org.zzrblog.ffmp.FFmpDecoderActivity" />
+        <activity android:name="org.zzrblog.ffmp.FFmpEncoderActivity" />
 
         <service android:name="org.zzrblog.FFmpegAIDLService"
                  android:process=":mprocess2"/>
