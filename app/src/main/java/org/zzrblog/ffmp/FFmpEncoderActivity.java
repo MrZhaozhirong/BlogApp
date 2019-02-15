@@ -1,6 +1,7 @@
 package org.zzrblog.ffmp;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.pm.PackageManager;
 import android.graphics.PixelFormat;
@@ -17,6 +18,7 @@ import android.support.v4.content.ContextCompat;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.SurfaceView;
+import android.view.View;
 import android.view.ViewTreeObserver;
 import android.widget.Toast;
 
@@ -187,5 +189,11 @@ public class FFmpEncoderActivity extends Activity implements ViewTreeObserver.On
             audioRecord.release();
             audioRecord = null;
         }
+    }
+
+
+
+    public void OnClickRtmpPush(@SuppressLint("USELESS") View view) {
+
     }
 }
