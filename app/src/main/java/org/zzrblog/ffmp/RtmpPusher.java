@@ -7,7 +7,7 @@ package org.zzrblog.ffmp;
 public class RtmpPusher {
 
     static {
-        System.loadLibrary("rtmp_push");
+        System.loadLibrary("rtmp-push");
     }
 
     public native void startPush(String url);

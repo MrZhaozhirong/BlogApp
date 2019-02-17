@@ -16,7 +16,6 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewTreeObserver;
@@ -170,7 +169,7 @@ public class FFmpEncoderActivity extends Activity implements ViewTreeObserver.On
                 //ByteBuffer byteBuffer = ByteBuffer.allocateDirect(minBufferSize);
                 int len = audioRecord.read(buffer, 0, buffer.length);
                 if(len > 0){
-                    Log.d(TAG, "audioRecord.read "+buffer.length);
+                    //Log.d(TAG, "audioRecord.read "+buffer.length);
                 }
             }
         }
@@ -192,8 +191,13 @@ public class FFmpEncoderActivity extends Activity implements ViewTreeObserver.On
     }
 
 
+    private RtmpPusher rtmpPusher;
 
     public void OnClickRtmpPush(@SuppressLint("USELESS") View view) {
+        if(rtmpPusher == null) {
+            rtmpPusher = new RtmpPusher();
+        }
 
+        rtmpPusher.setVideoOptions(360, 640, 100*1000, 25);
     }
 }

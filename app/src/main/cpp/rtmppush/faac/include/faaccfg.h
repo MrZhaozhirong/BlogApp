@@ -22,6 +22,8 @@
 #ifndef _FAACCFG_H_
 #define _FAACCFG_H_
 
+#include "faac.h"
+
 #define FAAC_CFG_VERSION 104
 
 /* MPEG ID's */
