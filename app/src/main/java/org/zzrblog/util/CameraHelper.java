@@ -216,7 +216,13 @@ public class CameraHelper implements Camera.PreviewCallback {
         return displayOrientation;
     }
 
-
+    public Point getPreviewViewSize() {
+        if(mCamera!=null) {
+            Camera.Size previewSize = mCamera.getParameters().getPreviewSize();
+            return new Point(previewSize.width, previewSize.height);
+        }
+        return null;
+    }
 
 
 
