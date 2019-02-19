@@ -66,8 +66,7 @@ JNIEXPORT void JNICALL Java_org_zzrblog_ffmp_RtmpPusher_feedVideoData
     jbyte* u = gRtmpPusher->pic_in->img.plane[1];
     jbyte* v = gRtmpPusher->pic_in->img.plane[2];
     memcpy(y, nv21_buffer, (size_t) y_len);
-    int i;
-    for (i = 0; i < u_len; i++) {
+    for (int i = 0; i < u_len; i++) {
         *(v + i) = *(nv21_buffer + y_len + i * 2);
         *(u + i) = *(nv21_buffer + y_len + i * 2 + 1);
     }
@@ -83,7 +82,7 @@ JNIEXPORT void JNICALL Java_org_zzrblog_ffmp_RtmpPusher_feedVideoData
         return;
     }
     //使用rtmp协议将h264编码的视频数据发送给流媒体服务器
-    //帧分为关键帧和普通帧，为了提高画面的纠错率，关键帧应包含SPS和PPS数据
+    //帧分为关键帧和普通帧，为了提高画面的纠错率，关键帧应都包含SPS和PPS数据
     int sps_len , pps_len;
     unsigned char sps[100];
     unsigned char pps[100];
@@ -91,7 +90,7 @@ JNIEXPORT void JNICALL Java_org_zzrblog_ffmp_RtmpPusher_feedVideoData
     memset(pps,0,100);
 
     //遍历NALU数组，根据NALU的类型判断
-    for(i=0; i < n_nal; i++){
+    for(int i=0; i < n_nal; i++){
         if(nal[i].i_type == NAL_SPS){
             //复制SPS数据
             sps_len = nal[i].i_payload - 4;
@@ -100,7 +99,6 @@ JNIEXPORT void JNICALL Java_org_zzrblog_ffmp_RtmpPusher_feedVideoData
             //复制PPS数据
             pps_len = nal[i].i_payload - 4;
             memcpy(pps,nal[i].p_payload + 4, pps_len); //不复制四字节起始码
-
             //发送序列信息
             //h264关键帧会包含SPS和PPS数据
             add_264_sequence_header(pps,sps,pps_len,sps_len);
@@ -108,7 +106,6 @@ JNIEXPORT void JNICALL Java_org_zzrblog_ffmp_RtmpPusher_feedVideoData
             //发送帧信息
             add_264_body(nal[i].p_payload, nal[i].i_payload);
         }
-
     }
 }
 
