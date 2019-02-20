@@ -10,6 +10,8 @@ public class RtmpPusher {
         System.loadLibrary("rtmp-push");
     }
 
+    public native void init();
+
     public native void startPush(String url);
 
     public native void stopPush();
@@ -23,14 +25,14 @@ public class RtmpPusher {
      * @param bitrate
      * @param fps
      */
-    public native void setVideoOptions(int width, int height, int bitrate, int fps);
+    public native void prepareVideoEncoder(int width, int height, int bitrate, int fps);
 
     /**
      * 设置音频参数
      * @param sampleRateInHz
      * @param channel
      */
-    public native void setAudioOptions(int sampleRateInHz, int channel);
+    public native void prepareAudioEncoder(int sampleRateInHz, int channel);
 
     /**
      * 发送视频数据

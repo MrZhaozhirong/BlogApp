@@ -2,6 +2,7 @@
 #include <malloc.h>
 #include "../common/zzr_common.h"
 #include "x264/include/x264.h"
+#include "rtmp/include/rtmp.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// 声明全局变量，在common.c的JNI_OnLoad定义
@@ -21,9 +22,139 @@ typedef struct _rtmp_push {
 } RtmpPusher;
 
 RtmpPusher* gRtmpPusher;
+
+
+
+
+
+
+
+
+
+
+/**
+ * 打包h264的SPS与PPS->NALU->RTMPPacket队列
+ */
+void add_param_sequence(unsigned char* pps, unsigned char* sps, int pps_len, int sps_len)
+{
+    int body_size = 16 + sps_len + pps_len; //按照H264标准配置SPS和PPS，共使用了16字节
+    RTMPPacket *packet = malloc(sizeof(RTMPPacket));
+    //RTMPPacket初始化
+    RTMPPacket_Alloc(packet, body_size);
+    RTMPPacket_Reset(packet);
+    // 获取packet对象当中的m_body指针
+    unsigned char * body = packet->m_body;
+    int i = 0;
+    //二进制表示：00010111
+    body[i++] = 0x17;//VideoHeaderTag:FrameType(1=key frame)+CodecID(7=AVC)
+    body[i++] = 0x00;//AVCPacketType=0（AVC sequence header）表示设置AVCDecoderConfigurationRecord
+    //composition time 0x000000 24bit ?
+    body[i++] = 0x00;
+    body[i++] = 0x00;
+    body[i++] = 0x00;
+    /*AVCDecoderConfigurationRecord*/
+    body[i++] = 0x01;//configurationVersion，版本为1
+    body[i++] = sps[1];//AVCProfileIndication
+    body[i++] = sps[2];//profile_compatibility
+    body[i++] = sps[3];//AVCLevelIndication
+    body[i++] = 0xFF;//lengthSizeMinusOne,H264视频中NALU的长度，计算方法是 1 + (lengthSizeMinusOne & 3),实际测试时发现总为FF，计算结果为4.
+    /*sps*/
+    body[i++] = 0xE1;//numOfSequenceParameterSets:SPS的个数，计算方法是 numOfSequenceParameterSets & 0x1F,实际测试时发现总为E1，计算结果为1.
+    body[i++] = (unsigned char) ((sps_len >> 8) & 0xff);//sequenceParameterSetLength:SPS的长度
+    body[i++] = (unsigned char) (sps_len & 0xff);//sequenceParameterSetNALUnits
+    memcpy(&body[i], sps, (size_t) sps_len);
+    i += sps_len;
+    /*pps*/
+    body[i++] = 0x01;//numOfPictureParameterSets:PPS 的个数,计算方法是 numOfPictureParameterSets & 0x1F,实际测试时发现总为E1，计算结果为1.
+    body[i++] = (unsigned char) ((pps_len >> 8) & 0xff);//pictureParameterSetLength:PPS的长度
+    body[i++] = (unsigned char) ((pps_len) & 0xff);//PPS
+    memcpy(&body[i], pps, (size_t) pps_len);
+    i += pps_len;
+
+
+    //块消息头的类型（4种）
+    packet->m_headerType = RTMP_PACKET_SIZE_MEDIUM;
+    //消息类型ID（1-7协议控制；8，9音视频；10以后为AMF编码消息）
+    packet->m_packetType = RTMP_PACKET_TYPE_VIDEO;
+    //时间戳是绝对值还是相对值
+    packet->m_hasAbsTimestamp = 0;
+    //块流ID，Audio和Vidio通道
+    packet->m_nChannel = 0x04;
+    //记录了每一个tag相对于第一个tag（File Header）的相对时间。
+    //以毫秒为单位。而File Header的time stamp永远为0。
+    packet->m_nTimeStamp = 0;
+    //消息流ID, last 4 bytes in a long header, 不在这里配置
+    //packet->m_nInfoField2 = -1;
+    //Payload Length
+    packet->m_nBodySize = (uint32_t) body_size;
+    //加入到RTMPPacket发送队列
+    add_rtmp_packet(packet);
+}
+
+/**
+ * 打包h264的图像(IPB)帧数据->NALU->RTMPPacket队列
+ */
+void add_common_frame(unsigned char *buf ,int len)
+{
+    // 每个NALU之间通过startcode（起始码）进行分隔，起始码分成两种：0x000001（3Byte）或者0x00000001（4Byte）。
+    // 如果NALU对应的Slice为一帧的开始就用0x00000001，否则就用0x000001。
+    //去掉起始码(界定符)
+    if(buf[2] == 0x00){  //00 00 00 01
+        buf += 4;
+        len -= 4;
+    }else if(buf[2] == 0x01){ // 00 00 01
+        buf += 3;
+        len -= 3;
+    }
+    int body_size = len + 9;
+    RTMPPacket *packet = malloc(sizeof(RTMPPacket));
+    RTMPPacket_Alloc(packet, body_size);
+    // 获取packet对象当中的m_body指针
+    unsigned char * body = packet->m_body;
+    //buf[0] NAL Header与运算，获取type，根据type判断关键帧和普通帧
+    //当NAL头信息中，type（第一个字节的前5位）等于5，说明这是关键帧NAL单元
+    int type = buf[0] & 0x1f;
+    //Inter Frame 帧间压缩 普通帧
+    body[0] = 0x27;//VideoHeaderTag:FrameType(2=Inter Frame)+CodecID(7=AVC)
+    //IDR I帧图像
+    if (type == NAL_SLICE_IDR) {
+        body[0] = 0x17;//VideoHeaderTag:FrameType(1=key frame)+CodecID(7=AVC)
+    }
+    //AVCPacketType = 1
+    body[1] = 0x01; /*nal unit,NALUs（AVCPacketType == 1)*/
+    body[2] = 0x00; //composition time 0x000000 24bit
+    body[3] = 0x00;
+    body[4] = 0x00;
+    //写入NALU信息，右移8位，一个字节的读取？
+    body[5] = (len >> 24) & 0xff;
+    body[6] = (len >> 16) & 0xff;
+    body[7] = (len >> 8) & 0xff;
+    body[8] = (len) & 0xff;
+    /*copy data*/
+    memcpy(&body[9], buf, (size_t) len);
+
+    //块消息头的类型（4种）
+    packet->m_headerType = RTMP_PACKET_SIZE_LARGE;
+    //消息类型ID（1-7协议控制；8，9音视频；10以后为AMF编码消息）
+    packet->m_packetType = RTMP_PACKET_TYPE_VIDEO;
+    //时间戳是绝对值还是相对值
+    packet->m_hasAbsTimestamp = 0;
+    //块流ID，Audio和Vidio通道
+    packet->m_nChannel = 0x04;
+    //记录了每一个tag相对于第一个tag（File Header）的相对时间。
+    packet->m_nTimeStamp = RTMP_GetTime() - start_time;;
+    //消息流ID, last 4 bytes in a long header, 不在这里配置
+    //packet->m_nInfoField2 = -1;
+    //Payload Length
+    packet->m_nBodySize = (uint32_t) body_size;
+    //加入到RTMPPacket发送队列
+    add_rtmp_packet(packet);
+}
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// native method implementation ////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 
 
 JNIEXPORT void JNICALL Java_org_zzrblog_ffmp_RtmpPusher_feedAudioData
@@ -33,7 +164,7 @@ JNIEXPORT void JNICALL Java_org_zzrblog_ffmp_RtmpPusher_feedAudioData
 }
 
 JNIEXPORT void JNICALL
-Java_org_zzrblog_ffmp_RtmpPusher_setAudioOptions(JNIEnv *env, jobject jobj,
+Java_org_zzrblog_ffmp_RtmpPusher_prepareAudioEncoder(JNIEnv *env, jobject jobj,
                                                  jint sampleRateInHz, jint channel)
 {
     if(gRtmpPusher == NULL) {
@@ -42,7 +173,6 @@ Java_org_zzrblog_ffmp_RtmpPusher_setAudioOptions(JNIEnv *env, jobject jobj,
     gRtmpPusher->sampleRateInHz = sampleRateInHz;
     gRtmpPusher->channel = channel;
 }
-
 
 
 
@@ -71,8 +201,6 @@ JNIEXPORT void JNICALL Java_org_zzrblog_ffmp_RtmpPusher_feedVideoData
         *(u + i) = *(nv21_buffer + y_len + i * 2 + 1);
     }
 
-
-
     x264_nal_t *nal = NULL; //h264编码得到NALU数组
     int n_nal = -1; //NALU的个数
     //进行h264编码
@@ -84,14 +212,14 @@ JNIEXPORT void JNICALL Java_org_zzrblog_ffmp_RtmpPusher_feedVideoData
     //使用rtmp协议将h264编码的视频数据发送给流媒体服务器
     //帧分为关键帧和普通帧，为了提高画面的纠错率，关键帧应都包含SPS和PPS数据
     int sps_len , pps_len;
-    unsigned char sps[100];
-    unsigned char pps[100];
-    memset(sps,0,100);
-    memset(pps,0,100);
+    unsigned char sps[256];
+    unsigned char pps[256];
+    memset(sps,0,256);
+    memset(pps,0,256);
 
     //遍历NALU数组，根据NALU的类型判断
     for(int i=0; i < n_nal; i++){
-        if(nal[i].i_type == NAL_SPS){
+        if(nal[i].i_type == NAL_SPS) {
             //复制SPS数据
             sps_len = nal[i].i_payload - 4;
             memcpy(sps,nal[i].p_payload + 4, sps_len); //不复制四字节起始码
@@ -101,20 +229,22 @@ JNIEXPORT void JNICALL Java_org_zzrblog_ffmp_RtmpPusher_feedVideoData
             memcpy(pps,nal[i].p_payload + 4, pps_len); //不复制四字节起始码
             //发送序列信息
             //h264关键帧会包含SPS和PPS数据
-            add_264_sequence_header(pps,sps,pps_len,sps_len);
+            add_param_sequence(pps,sps,pps_len,sps_len);
         }else{
-            //发送帧信息
-            add_264_body(nal[i].p_payload, nal[i].i_payload);
+            //发送普通帧信息
+            add_common_frame(nal[i].p_payload, nal[i].i_payload);
         }
     }
 }
 
 JNIEXPORT void JNICALL
-Java_org_zzrblog_ffmp_RtmpPusher_setVideoOptions(JNIEnv *env, jobject jobj,
+Java_org_zzrblog_ffmp_RtmpPusher_prepareVideoEncoder(JNIEnv *env, jobject jobj,
                                                         jint width, jint height, jint bitrate, jint fps)
 {
     if(gRtmpPusher == NULL) {
         gRtmpPusher = (RtmpPusher*)calloc(1, sizeof(RtmpPusher));
+    } else if(gRtmpPusher->x264_encoder != NULL){
+        return;
     }
     gRtmpPusher->bitrate = bitrate;
     gRtmpPusher->fps = fps;
@@ -134,7 +264,6 @@ Java_org_zzrblog_ffmp_RtmpPusher_setVideoOptions(JNIEnv *env, jobject jobj,
     param.rc.i_rc_method = X264_RC_CRF;
     param.rc.i_bitrate = bitrate / 1000; //码率(比特率) 单位Kbps
     param.rc.i_vbv_max_bitrate = (int) (bitrate / 1000 * 1.2); //瞬时最大码率
-
     //码率控制不通过timebase和timestamp，而是fps
     param.b_vfr_input = 0;
     param.i_fps_num = (uint32_t) fps; //* 帧率分子
@@ -142,7 +271,6 @@ Java_org_zzrblog_ffmp_RtmpPusher_setVideoOptions(JNIEnv *env, jobject jobj,
     param.i_timebase_den = param.i_fps_num;
     param.i_timebase_num = param.i_fps_den;
     param.i_threads = 1;//并行编码线程数量，0默认为多线程
-
     //是否把SPS和PPS放入每一个关键帧
     //置为1表示每个I帧都重复带SPS/PPS头，为了提高图像的纠错能力
     param.b_repeat_headers = 1;
@@ -161,8 +289,6 @@ Java_org_zzrblog_ffmp_RtmpPusher_setVideoOptions(JNIEnv *env, jobject jobj,
         LOGI("打开x264编码器成功...");
     }
 }
-
-
 
 
 JNIEXPORT void JNICALL
