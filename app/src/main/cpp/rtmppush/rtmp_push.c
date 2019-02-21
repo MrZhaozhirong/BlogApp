@@ -151,6 +151,8 @@ void add_common_frame(unsigned char *buf ,int len)
     packet->m_nBodySize = (uint32_t) body_size;
     //加入到RTMPPacket发送队列
     add_rtmp_packet(packet);
+
+
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// native method implementation ////////////
