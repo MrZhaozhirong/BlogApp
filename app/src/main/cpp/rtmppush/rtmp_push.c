@@ -19,6 +19,8 @@ typedef struct _rtmp_push {
     x264_picture_t* pic_in;
     x264_t *x264_encoder;
     x264_picture_t* pic_out;
+
+    unsigned int start_time;
 } RtmpPusher;
 
 RtmpPusher* gRtmpPusher;
@@ -43,7 +45,7 @@ void add_param_sequence(unsigned char* pps, unsigned char* sps, int pps_len, int
     RTMPPacket_Alloc(packet, body_size);
     RTMPPacket_Reset(packet);
     // 获取packet对象当中的m_body指针
-    unsigned char * body = packet->m_body;
+    char * body = packet->m_body;
     int i = 0;
     //二进制表示：00010111
     body[i++] = 0x17;//VideoHeaderTag:FrameType(1=key frame)+CodecID(7=AVC)
@@ -78,7 +80,7 @@ void add_param_sequence(unsigned char* pps, unsigned char* sps, int pps_len, int
     packet->m_packetType = RTMP_PACKET_TYPE_VIDEO;
     //时间戳是绝对值还是相对值
     packet->m_hasAbsTimestamp = 0;
-    //块流ID，Audio和Vidio通道
+    //块流ID，Audio 和 Video通道
     packet->m_nChannel = 0x04;
     //记录了每一个tag相对于第一个tag（File Header）的相对时间。
     //以毫秒为单位。而File Header的time stamp永远为0。
@@ -142,7 +144,7 @@ void add_common_frame(unsigned char *buf ,int len)
     //块流ID，Audio和Vidio通道
     packet->m_nChannel = 0x04;
     //记录了每一个tag相对于第一个tag（File Header）的相对时间。
-    packet->m_nTimeStamp = RTMP_GetTime() - start_time;;
+    packet->m_nTimeStamp = RTMP_GetTime() - gRtmpPusher->start_time;
     //消息流ID, last 4 bytes in a long header, 不在这里配置
     //packet->m_nInfoField2 = -1;
     //Payload Length
@@ -153,28 +155,6 @@ void add_common_frame(unsigned char *buf ,int len)
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// native method implementation ////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-
-
-JNIEXPORT void JNICALL Java_org_zzrblog_ffmp_RtmpPusher_feedAudioData
-        (JNIEnv *env, jobject jobj, jbyteArray array, jint len)
-{
-
-}
-
-JNIEXPORT void JNICALL
-Java_org_zzrblog_ffmp_RtmpPusher_prepareAudioEncoder(JNIEnv *env, jobject jobj,
-                                                 jint sampleRateInHz, jint channel)
-{
-    if(gRtmpPusher == NULL) {
-        gRtmpPusher = (RtmpPusher*)calloc(1, sizeof(RtmpPusher));
-    }
-    gRtmpPusher->sampleRateInHz = sampleRateInHz;
-    gRtmpPusher->channel = channel;
-}
-
-
 
 JNIEXPORT void JNICALL Java_org_zzrblog_ffmp_RtmpPusher_feedVideoData
         (JNIEnv *env, jobject jobj, jbyteArray array)
@@ -291,10 +271,37 @@ Java_org_zzrblog_ffmp_RtmpPusher_prepareVideoEncoder(JNIEnv *env, jobject jobj,
 }
 
 
+
+
+JNIEXPORT void JNICALL Java_org_zzrblog_ffmp_RtmpPusher_feedAudioData
+        (JNIEnv *env, jobject jobj, jbyteArray array, jint len)
+{
+
+}
+
+JNIEXPORT void JNICALL
+Java_org_zzrblog_ffmp_RtmpPusher_prepareAudioEncoder(JNIEnv *env, jobject jobj,
+                                                     jint sampleRateInHz, jint channel)
+{
+    if(gRtmpPusher == NULL) {
+        gRtmpPusher = (RtmpPusher*)calloc(1, sizeof(RtmpPusher));
+    }
+    gRtmpPusher->sampleRateInHz = sampleRateInHz;
+    gRtmpPusher->channel = channel;
+}
+
+
+
+
 JNIEXPORT void JNICALL
 Java_org_zzrblog_ffmp_RtmpPusher_startPush(JNIEnv *env, jobject jobj, jstring url_jstr)
 {
-
+    if(gRtmpPusher == NULL) {
+        LOGE("%s","请调用函数：prepareAudioEncoder/prepareVideoEncoder");
+        return;
+    }
+    //初始化启动计时
+    gRtmpPusher->start_time = RTMP_GetTime();
 }
 
 JNIEXPORT void JNICALL

@@ -10,8 +10,11 @@ public class RtmpPusher {
         System.loadLibrary("rtmp-push");
     }
 
-    public native void init();
 
+    /**
+     * 请先调用函数：prepareAudioEncoder/prepareVideoEncoder
+     * @param url rtmp_url
+     */
     public native void startPush(String url);
 
     public native void stopPush();
