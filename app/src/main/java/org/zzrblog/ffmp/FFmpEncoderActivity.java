@@ -197,11 +197,11 @@ public class FFmpEncoderActivity extends Activity implements ViewTreeObserver.On
         if(rtmpPusher == null) {
             rtmpPusher = new RtmpPusher();
         }
-        Point previewViewSize = cameraHelper.getPreviewViewSize();
-        if(previewViewSize == null)
+        Point previewSize = cameraHelper.getPreviewSize();
+        if(previewSize == null)
             return;
 
-        rtmpPusher.prepareVideoEncoder(previewViewSize.x, previewViewSize.y, 100*1000, 25);
+        rtmpPusher.prepareVideoEncoder(previewSize.x, previewSize.y, 100*1000, 25);
         rtmpPusher.prepareAudioEncoder(sampleRateInHz, audioRecordChannel);
     }
 }

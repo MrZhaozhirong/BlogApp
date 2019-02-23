@@ -1,8 +1,10 @@
 #include <jni.h>
 #include <malloc.h>
+#include <pthread.h>
 #include "../common/zzr_common.h"
 #include "x264/include/x264.h"
 #include "rtmp/include/rtmp.h"
+#include "queue.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// 声明全局变量，在common.c的JNI_OnLoad定义
@@ -16,21 +18,95 @@ typedef struct _rtmp_push {
     int sampleRateInHz;
     int channel;
 
+    // x264编码
     x264_picture_t* pic_in;
     x264_t *x264_encoder;
     x264_picture_t* pic_out;
 
     unsigned int start_time;
+    //线程处理
+    pthread_mutex_t mutex;
+    pthread_cond_t cond;
+    pthread_t rtmp_push_thread_id;
+    int stop_rtmp_push_thread;
+    //rtmp流媒体地址
+    char *rtmp_path;
 } RtmpPusher;
 
 RtmpPusher* gRtmpPusher;
 
+/**
+ * 从双向队列中不断提取RTMPPacket发送到指定的流媒体服务器
+ */
+void* rtmp_push_thread(void * arg) {
+    //创建RTMP对象
+    RTMP *rtmp = RTMP_Alloc();
+    if(!rtmp){
+        LOGE("rtmp初始化失败");
+        goto end;
+    }
+    //初始化rtmp
+    RTMP_Init(rtmp);
+    //设置连接超时时间
+    rtmp->Link.timeout = 5;
+    //设置流媒体地址
+    RTMP_SetupURL(rtmp, gRtmpPusher->rtmp_path);
+    //发布rtmp数据流
+    RTMP_EnableWrite(rtmp);
+    //建立连接
+    if(!RTMP_Connect(rtmp,NULL)){
+        LOGE("%s","RTMP 连接失败");
+        goto end;
+    }
+    // 初始化启动计时
+    gRtmpPusher->start_time = RTMP_GetTime();
+    if(!RTMP_ConnectStream(rtmp,0)) { //连接流
+        goto end;
+    }
+    while(gRtmpPusher->stop_rtmp_push_thread == 0)
+    {
+        pthread_mutex_lock(&(gRtmpPusher->mutex));
+        // 等待RTMPPacket加入到双向队列，然后 pthread_cond_signal
+        pthread_cond_wait(&(gRtmpPusher->cond), &(gRtmpPusher->mutex));
+        //取出队列中的RTMPPacket
+        RTMPPacket *packet = queue_get_first();
+        if(packet) {
+            queue_delete_first(); //从队列中移除当前节点
+            //注意：Note
+            // 我们在打包RTMPPacket的时候，没有填 m_nInfoField2，
+            // 是因为打包的时候不知道对应的stream_id是多少
+            // 这里装填RTMPPacket的m_nInfoField2字段值 = RTMP的推送流ID stream_id
+            packet->m_nInfoField2 = rtmp->m_stream_id;
+            int i = RTMP_SendPacket(rtmp,packet,TRUE); //TRUE放入librtmp队列中，并不是立即发送
+            if(!i){
+                LOGE("RTMP 断开");
+                RTMPPacket_Free(packet);
+                pthread_mutex_unlock(&(gRtmpPusher->mutex));
+                goto end;
+            }
+            RTMPPacket_Free(packet);
+        }
+        pthread_mutex_unlock(&(gRtmpPusher->mutex));
+    }
+end:
+    LOGI("%s","释放资源");
+    RTMP_Close(rtmp);
+    RTMP_Free(rtmp);
+    return 0;
+}
 
+/**
+ * 加入RTMPPacket双向队列，等待发送线程发送
+ */
+void add_rtmp_packet(RTMPPacket *packet) {
+    if(gRtmpPusher == NULL)
+        return;
 
-
-
-
-
+    pthread_mutex_lock(&(gRtmpPusher->mutex));
+    queue_append_last(packet);
+    pthread_cond_signal(&(gRtmpPusher->cond));
+    pthread_mutex_unlock(&(gRtmpPusher->mutex));
+}
 
 
 
@@ -151,8 +227,6 @@ void add_common_frame(unsigned char *buf ,int len)
     packet->m_nBodySize = (uint32_t) body_size;
     //加入到RTMPPacket发送队列
     add_rtmp_packet(packet);
-
-
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// native method implementation ////////////
@@ -299,17 +373,39 @@ JNIEXPORT void JNICALL
 Java_org_zzrblog_ffmp_RtmpPusher_startPush(JNIEnv *env, jobject jobj, jstring url_jstr)
 {
     if(gRtmpPusher == NULL) {
-        LOGE("%s","请调用函数：prepareAudioEncoder/prepareVideoEncoder");
+        LOGE("%s","请先调用函数：prepareAudioEncoder/prepareVideoEncoder");
         return;
     }
-    //初始化启动计时
-    gRtmpPusher->start_time = RTMP_GetTime();
+    if(gRtmpPusher->rtmp_push_thread_id > 0) {
+        LOGE("%s","rtmp_push_thread已启动，请stopPush");
+        return;
+    }
+    // 初始化的操作
+    const char* url_cstr = (*env)->GetStringUTFChars(env,url_jstr,NULL);
+    // 复制url_cstr内容到rtmp_path
+    gRtmpPusher->rtmp_path = malloc(strlen(url_cstr) + 1);
+    memset(gRtmpPusher->rtmp_path, 0, strlen(url_cstr)+1);
+    memcpy(gRtmpPusher->rtmp_path, url_cstr, strlen(url_cstr));
+    //初始化互斥锁与条件变量
+    pthread_mutex_init(&(gRtmpPusher->mutex), NULL);
+    pthread_cond_init(&(gRtmpPusher->cond), NULL);
+    //创建RTMPPacket双向队列
+    create_queue();
+    //启动消费者线程（从队列中不断拉取RTMPPacket发送给流媒体服务器）
+    gRtmpPusher->stop_rtmp_push_thread = 0;
+    pthread_create(&(gRtmpPusher->rtmp_push_thread_id), NULL, rtmp_push_thread, NULL);
+
+    (*env)->ReleaseStringUTFChars(env,url_jstr,url_cstr);
+    LOGI("%s","RtmpPusher startPush !");
 }
 
 JNIEXPORT void JNICALL
 Java_org_zzrblog_ffmp_RtmpPusher_stopPush(JNIEnv *env, jobject jobj)
 {
-
+    gRtmpPusher->rtmp_push_thread_id = 0;
+    pthread_join(gRtmpPusher->rtmp_push_thread_id, NULL);
+    free(gRtmpPusher->rtmp_path);
+    LOGI("%s","RtmpPusher stopPush !");
 }
 
 JNIEXPORT void JNICALL
