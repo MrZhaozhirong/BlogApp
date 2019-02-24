@@ -291,6 +291,7 @@ JNIEXPORT void JNICALL Java_org_zzrblog_ffmp_RtmpPusher_feedVideoData
             add_common_frame(nal[i].p_payload, nal[i].i_payload);
         }
     }
+    (*env)->ReleaseByteArrayElements(env, array, nv21_buffer, NULL);
 }
 
 JNIEXPORT void JNICALL
