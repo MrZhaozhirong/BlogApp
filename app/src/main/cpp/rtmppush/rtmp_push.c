@@ -4,6 +4,7 @@
 #include "../common/zzr_common.h"
 #include "x264/include/x264.h"
 #include "rtmp/include/rtmp.h"
+#include "faac/include/faac.h"
 #include "queue.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -15,27 +16,33 @@ typedef struct _rtmp_push {
     int height;
     int bitrate;
     int fps;
-    int sampleRateInHz;
-    int channel;
+    int sampleRateInHz; //音频采样频率
+    int channelNum; // 音频声道数
+    unsigned long nInputSamples; //输入的采样个数
+    unsigned long nMaxOutputBytes; //编码输出之后的字节数
+    //rtmp流媒体地址
+    char *rtmp_path;
 
-    // x264编码
+    // x264视频编码
     x264_picture_t* pic_in;
     x264_t *x264_encoder;
     x264_picture_t* pic_out;
 
-    unsigned int start_time;
+    // faac音频编码
+    faacEncHandle faac_encoder;
     //线程处理
+    unsigned int start_time;
     pthread_mutex_t mutex;
     pthread_cond_t cond;
     pthread_t rtmp_push_thread_id;
     int stop_rtmp_push_thread;
-    //rtmp流媒体地址
-    char *rtmp_path;
+
 } RtmpPusher;
 
 RtmpPusher* gRtmpPusher;
 
 /**
+ * Send RTMPPacket 工作线程
  * 从双向队列中不断提取RTMPPacket发送到指定的流媒体服务器
  */
 void* rtmp_push_thread(void * arg) {
@@ -103,7 +110,9 @@ void add_rtmp_packet(RTMPPacket *packet) {
         return;
 
     pthread_mutex_lock(&(gRtmpPusher->mutex));
-    queue_append_last(packet);
+    if(gRtmpPusher->stop_rtmp_push_thread == 0) {
+        queue_append_last(packet);
+    }
     pthread_cond_signal(&(gRtmpPusher->cond));
     pthread_mutex_unlock(&(gRtmpPusher->mutex));
 }
@@ -188,7 +197,7 @@ void add_common_frame(unsigned char *buf ,int len)
     RTMPPacket *packet = malloc(sizeof(RTMPPacket));
     RTMPPacket_Alloc(packet, body_size);
     // 获取packet对象当中的m_body指针
-    unsigned char * body = packet->m_body;
+    char * body = packet->m_body;
     //buf[0] NAL Header与运算，获取type，根据type判断关键帧和普通帧
     //当NAL头信息中，type（第一个字节的前5位）等于5，说明这是关键帧NAL单元
     int type = buf[0] & 0x1f;
@@ -248,13 +257,14 @@ JNIEXPORT void JNICALL Java_org_zzrblog_ffmp_RtmpPusher_feedVideoData
 
     //NV21->YUV420P
     jbyte* nv21_buffer = (*env)->GetByteArrayElements(env,array,NULL);
-    jbyte* y = gRtmpPusher->pic_in->img.plane[0];
-    jbyte* u = gRtmpPusher->pic_in->img.plane[1];
-    jbyte* v = gRtmpPusher->pic_in->img.plane[2];
+    uint8_t* y = gRtmpPusher->pic_in->img.plane[0];
+    uint8_t* u = gRtmpPusher->pic_in->img.plane[1];
+    uint8_t* v = gRtmpPusher->pic_in->img.plane[2];
     memcpy(y, nv21_buffer, (size_t) y_len);
     for (int i = 0; i < u_len; i++) {
-        *(v + i) = *(nv21_buffer + y_len + i * 2);
-        *(u + i) = *(nv21_buffer + y_len + i * 2 + 1);
+        //NV21 先v后u
+        *(v + i) = (uint8_t) *(nv21_buffer + y_len + i * 2);
+        *(u + i) = (uint8_t) *(nv21_buffer + y_len + i * 2 + 1);
     }
 
     x264_nal_t *nal = NULL; //h264编码得到NALU数组
@@ -264,10 +274,14 @@ JNIEXPORT void JNICALL Java_org_zzrblog_ffmp_RtmpPusher_feedVideoData
                            gRtmpPusher->pic_in, gRtmpPusher->pic_out) < 0){
         LOGE("%s","编码失败");
         return;
+    } else {
+        // 初始化编码器的时候，pic_in->i_pts = 0
+        // 每编码一帧 i_pts累加1
+        gRtmpPusher->pic_in->i_pts += 1;
     }
     //使用rtmp协议将h264编码的视频数据发送给流媒体服务器
     //帧分为关键帧和普通帧，为了提高画面的纠错率，关键帧应都包含SPS和PPS数据
-    int sps_len , pps_len;
+    int sps_len=0, pps_len=0;
     unsigned char sps[256];
     unsigned char pps[256];
     memset(sps,0,256);
@@ -278,20 +292,27 @@ JNIEXPORT void JNICALL Java_org_zzrblog_ffmp_RtmpPusher_feedVideoData
         if(nal[i].i_type == NAL_SPS) {
             //复制SPS数据
             sps_len = nal[i].i_payload - 4;
-            memcpy(sps,nal[i].p_payload + 4, sps_len); //不复制四字节起始码
+            memcpy(sps,nal[i].p_payload + 4, (size_t) sps_len); //不复制四字节起始码
+            if(sps_len>0 && pps_len>0) {
+                //发送序列信息
+                //h264关键帧会包含SPS和PPS数据
+                add_param_sequence(pps,sps,pps_len,sps_len);
+            }
         }else if(nal[i].i_type == NAL_PPS){
             //复制PPS数据
             pps_len = nal[i].i_payload - 4;
-            memcpy(pps,nal[i].p_payload + 4, pps_len); //不复制四字节起始码
-            //发送序列信息
-            //h264关键帧会包含SPS和PPS数据
-            add_param_sequence(pps,sps,pps_len,sps_len);
+            memcpy(pps,nal[i].p_payload + 4, (size_t) pps_len); //不复制四字节起始码
+            if(sps_len>0 && pps_len>0) {
+                //发送序列信息
+                //h264关键帧会包含SPS和PPS数据
+                add_param_sequence(pps,sps,pps_len,sps_len);
+            }
         }else{
             //发送普通帧信息
             add_common_frame(nal[i].p_payload, nal[i].i_payload);
         }
     }
-    (*env)->ReleaseByteArrayElements(env, array, nv21_buffer, NULL);
+    (*env)->ReleaseByteArrayElements(env, array, nv21_buffer, 0);
 }
 
 JNIEXPORT void JNICALL
@@ -339,7 +360,9 @@ Java_org_zzrblog_ffmp_RtmpPusher_prepareVideoEncoder(JNIEnv *env, jobject jobj,
 
     //x264_picture_t（输入图像）初始化
     x264_picture_alloc(gRtmpPusher->pic_in, param.i_csp, param.i_width, param.i_height);
-
+    if(gRtmpPusher->pic_in != NULL) {
+        gRtmpPusher->pic_in->i_pts = 0;
+    }
     //打开编码器
     gRtmpPusher->x264_encoder = x264_encoder_open(&param);
     if(gRtmpPusher->x264_encoder){
@@ -358,13 +381,41 @@ JNIEXPORT void JNICALL Java_org_zzrblog_ffmp_RtmpPusher_feedAudioData
 
 JNIEXPORT void JNICALL
 Java_org_zzrblog_ffmp_RtmpPusher_prepareAudioEncoder(JNIEnv *env, jobject jobj,
-                                                     jint sampleRateInHz, jint channel)
+                                                     jint sampleRateInHz, jint channelNum)
 {
     if(gRtmpPusher == NULL) {
         gRtmpPusher = (RtmpPusher*)calloc(1, sizeof(RtmpPusher));
+    }else if(gRtmpPusher->faac_encoder != NULL){
+        return;
     }
     gRtmpPusher->sampleRateInHz = sampleRateInHz;
-    gRtmpPusher->channel = channel;
+    gRtmpPusher->channelNum = channelNum;
+    // 初始化faac音频编码器
+    gRtmpPusher->faac_encoder = faacEncOpen((unsigned long) sampleRateInHz,
+                                            (unsigned int) channelNum,
+                                            &(gRtmpPusher->nInputSamples),
+                                            &(gRtmpPusher->nMaxOutputBytes));
+    if(!gRtmpPusher->faac_encoder){
+        LOGE("音频编码器打开失败");
+        return;
+    }
+    //设置音频编码参数
+    faacEncConfigurationPtr pFaacConfigure = faacEncGetCurrentConfiguration(gRtmpPusher->faac_encoder);
+    pFaacConfigure->mpegVersion = MPEG4;
+    pFaacConfigure->allowMidside = 1;
+    pFaacConfigure->aacObjectType = LOW;
+    pFaacConfigure->outputFormat = 0; //输出是否包含ADTS头
+    pFaacConfigure->useTns = 1; //时域噪音控制,大概就是消爆音
+    pFaacConfigure->useLfe = 0;
+	//pFaacConfigure->inputFormat = FAAC_INPUT_16BIT;
+    pFaacConfigure->quantqual = 100;
+    pFaacConfigure->bandWidth = 0; //频宽
+    pFaacConfigure->shortctl = SHORTCTL_NORMAL;
+    if(!faacEncSetConfiguration(gRtmpPusher->faac_encoder, pFaacConfigure)){
+        LOGE("%s","音频编码器配置失败..");
+        return;
+    }
+    LOGI("%s","音频编码器配置成功");
 }
 
 
@@ -374,7 +425,7 @@ JNIEXPORT void JNICALL
 Java_org_zzrblog_ffmp_RtmpPusher_startPush(JNIEnv *env, jobject jobj, jstring url_jstr)
 {
     if(gRtmpPusher == NULL) {
-        LOGE("%s","请先调用函数：prepareAudioEncoder/prepareVideoEncoder");
+        LOGE("%s","请先调用函数：prepareAudioEncoder&prepareVideoEncoder");
         return;
     }
     if(gRtmpPusher->rtmp_push_thread_id > 0) {
@@ -393,8 +444,8 @@ Java_org_zzrblog_ffmp_RtmpPusher_startPush(JNIEnv *env, jobject jobj, jstring ur
     //创建RTMPPacket双向队列
     create_queue();
     //启动消费者线程（从队列中不断拉取RTMPPacket发送给流媒体服务器）
-    gRtmpPusher->stop_rtmp_push_thread = 0;
     pthread_create(&(gRtmpPusher->rtmp_push_thread_id), NULL, rtmp_push_thread, NULL);
+    gRtmpPusher->stop_rtmp_push_thread = 0;
 
     (*env)->ReleaseStringUTFChars(env,url_jstr,url_cstr);
     LOGI("%s","RtmpPusher startPush !");
@@ -403,7 +454,7 @@ Java_org_zzrblog_ffmp_RtmpPusher_startPush(JNIEnv *env, jobject jobj, jstring ur
 JNIEXPORT void JNICALL
 Java_org_zzrblog_ffmp_RtmpPusher_stopPush(JNIEnv *env, jobject jobj)
 {
-    gRtmpPusher->rtmp_push_thread_id = 0;
+    gRtmpPusher->stop_rtmp_push_thread = 1;
     pthread_join(gRtmpPusher->rtmp_push_thread_id, NULL);
     free(gRtmpPusher->rtmp_path);
     LOGI("%s","RtmpPusher stopPush !");

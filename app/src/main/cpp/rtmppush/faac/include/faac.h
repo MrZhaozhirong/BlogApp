@@ -22,7 +22,7 @@
 #ifndef _FAAC_H_
 #define _FAAC_H_
 
-#include "faaccfg.h"
+
 
 #ifdef __cplusplus
 extern "C" {

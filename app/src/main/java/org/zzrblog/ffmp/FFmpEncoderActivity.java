@@ -137,7 +137,7 @@ public class FFmpEncoderActivity extends Activity implements ViewTreeObserver.On
         cameraHelper.init();
     }
 
-    private int audioRecordChannel = 1;
+    private int audioRecordChannelNum = 1;
     private int sampleRateInHz = 44100;
     private int minBufferSize;
     private boolean isAudioRecord;
@@ -145,7 +145,7 @@ public class FFmpEncoderActivity extends Activity implements ViewTreeObserver.On
 
     private void initRecordAudio() {
         // 单声道 44100
-        int channelConfig = audioRecordChannel == 1 ?
+        int channelConfig = audioRecordChannelNum == 1 ?
                 AudioFormat.CHANNEL_IN_MONO : AudioFormat.CHANNEL_IN_STEREO;
         minBufferSize = AudioRecord.getMinBufferSize(sampleRateInHz, channelConfig, AudioFormat.ENCODING_PCM_16BIT);
         audioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC,
@@ -202,6 +202,6 @@ public class FFmpEncoderActivity extends Activity implements ViewTreeObserver.On
             return;
 
         rtmpPusher.prepareVideoEncoder(previewSize.x, previewSize.y, 100*1000, 25);
-        rtmpPusher.prepareAudioEncoder(sampleRateInHz, audioRecordChannel);
+        rtmpPusher.prepareAudioEncoder(sampleRateInHz, audioRecordChannelNum);
     }
 }

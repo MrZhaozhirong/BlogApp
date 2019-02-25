@@ -213,16 +213,28 @@ set_target_properties(x264 PROPERTIES IMPORTED_LOCATION
             ${PROJECT_SOURCE_DIR}/src/main/cpp/rtmppush/x264/libx264.a)
 set_target_properties(x264 PROPERTIES LINKER_LANGUAGE CXX)
 
+add_library(rtmp STATIC IMPORTED )
+set_target_properties(rtmp PROPERTIES IMPORTED_LOCATION
+            ${PROJECT_SOURCE_DIR}/src/main/cpp/rtmppush/rtmp/librtmp.a)
+set_target_properties(rtmp PROPERTIES LINKER_LANGUAGE CXX)
+
+add_library(faac STATIC IMPORTED )
+set_target_properties(faac PROPERTIES IMPORTED_LOCATION
+            ${PROJECT_SOURCE_DIR}/src/main/cpp/rtmppush/faac/libfaac.a)
+set_target_properties(faac PROPERTIES LINKER_LANGUAGE CXX)
+
 add_library( # 生成动态库的名称
              rtmp-push
              # 指定是动态库
              SHARED
              # 编译库的源代码文件
+             src/main/cpp/rtmppush/queue.c
              src/main/cpp/rtmppush/rtmp_push.c )
 
 target_link_libraries( # 指定目标链接库
                        rtmp-push
                        # 添加预编译库到目标链接库中
                        ${log-lib}
-                       ${android-lib}
-                       x264 )
+                       x264
+                       faac
+                       rtmp)
