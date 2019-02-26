@@ -402,12 +402,14 @@ Java_org_zzrblog_ffmp_RtmpPusher_prepareAudioEncoder(JNIEnv *env, jobject jobj,
     //设置音频编码参数
     faacEncConfigurationPtr pFaacConfigure = faacEncGetCurrentConfiguration(gRtmpPusher->faac_encoder);
     pFaacConfigure->mpegVersion = MPEG4;
-    pFaacConfigure->allowMidside = 1;
-    pFaacConfigure->aacObjectType = LOW;
+    pFaacConfigure->allowMidside = 1;//是否允许MidSide Coding(详情百度)
+    pFaacConfigure->aacObjectType = LOW;//设置AAC类型
     pFaacConfigure->outputFormat = 0; //输出是否包含ADTS头
-    pFaacConfigure->useTns = 1; //时域噪音控制,大概就是消爆音
-    pFaacConfigure->useLfe = 0;
-	//pFaacConfigure->inputFormat = FAAC_INPUT_16BIT;
+    // RAW_STREAM = 0, ADTS_STREAM=1  (ADTS可以实现单帧单独解码，raw由于缺少头无法单帧解码，因此无法做实时传输)
+    pFaacConfigure->useTns = 1; //是否使用瞬时噪声定形滤波器(具体作用不是很清楚)
+    pFaacConfigure->useLfe = 0; //是否允许一个声道为低频通道
+    pFaacConfigure->bitRate = 48000;  //设置比特率
+	pFaacConfigure->inputFormat = FAAC_INPUT_16BIT; //设置输入PCM格式
     pFaacConfigure->quantqual = 100;
     pFaacConfigure->bandWidth = 0; //频宽
     pFaacConfigure->shortctl = SHORTCTL_NORMAL;
