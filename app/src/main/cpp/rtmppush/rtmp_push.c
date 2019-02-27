@@ -19,7 +19,7 @@ typedef struct _rtmp_push {
     int sampleRateInHz; //音频采样频率
     int channelNum; // 音频声道数
     unsigned long nInputSamples; //输入的采样个数
-    unsigned long nMaxOutputBytes; //编码输出之后的字节数
+    unsigned long nMaxOutputBytes; //编码输出之后的最大字节数
     //rtmp流媒体地址
     char *rtmp_path;
 
@@ -374,9 +374,51 @@ Java_org_zzrblog_ffmp_RtmpPusher_prepareVideoEncoder(JNIEnv *env, jobject jobj,
 
 
 JNIEXPORT void JNICALL Java_org_zzrblog_ffmp_RtmpPusher_feedAudioData
-        (JNIEnv *env, jobject jobj, jbyteArray array, jint len)
+        (JNIEnv *env, jobject jObj, jbyteArray j_pcm_array, jint len)
 {
+    if(gRtmpPusher==NULL || gRtmpPusher->faac_encoder==NULL)
+        return;
+    // 传入的pcm_array 编码是 ENCODING_PCM_16BIT
 
+    // 16位 两字节 相当于 short
+    int16_t * pcm_input = (int16_t *)malloc(gRtmpPusher->nInputSamples * sizeof(int16_t));
+    // short * pcm_input = (short*) malloc(gRtmpPusher->nInputSamples * sizeof(short));
+    // 8位 1字节 相当于 char / byte
+    uint8_t * aac_output = (uint8_t *)malloc(gRtmpPusher->nMaxOutputBytes * sizeof(uint8_t));
+    //unsigned char * aac_output = (unsigned char*) malloc(gRtmpPusher->nMaxOutputBytes * sizeof(unsigned char));
+
+    jbyte* pPcmArray = (*env)->GetByteArrayElements(env, j_pcm_array, 0);
+    int nByteCount = 0;  //缓存计算位
+    unsigned int pcm_short_buf_size = (unsigned int) len / 2; //传入的byte数组包含多少个16位的pcm编码采样数据
+    int16_t* pcm_short_buf = (int16_t*) pPcmArray;
+
+    while (nByteCount < pcm_short_buf_size) {
+        // 针对每nInputSamples个16位pcm数据操作
+        unsigned int audioLength = gRtmpPusher->nInputSamples; //aac编码输入的默认采样个数
+        if ((nByteCount + gRtmpPusher->nInputSamples) >= pcm_short_buf_size) {
+            audioLength = pcm_short_buf_size - nByteCount;
+        }
+        for (int i = 0; i < audioLength; i++) {
+            //每次从传入的pcm音频队列中读出量化位数为8的pcm数据。
+            int16_t s = (pcm_short_buf + nByteCount)[i];
+            pcm_input[i] = s << 8;//用8个二进制位来表示一个采样量化点（模数转换）
+        }
+        nByteCount += gRtmpPusher->nInputSamples;
+        //利用FAAC进行编码
+        int byteslen = faacEncEncode(gRtmpPusher->faac_encoder,
+                                     pcm_input, audioLength,
+                                     aac_output, gRtmpPusher->nMaxOutputBytes);
+        if (byteslen < 1) {
+            continue;
+        }
+        add_aac_body(aac_output, byteslen);//从aac_output中得到编码后的aac数据流，放到数据队列
+    }
+    //处理完当前批pcm数据了，释放资源
+    (*env)->ReleaseByteArrayElements(env, j_pcm_array, pPcmArray, NULL);
+    if (aac_output)
+        free(aac_output);
+    if (pcm_input)
+        free(pcm_input);
 }
 
 JNIEXPORT void JNICALL
