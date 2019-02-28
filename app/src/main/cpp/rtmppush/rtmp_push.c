@@ -1,7 +1,6 @@
 #include <jni.h>
 #include <malloc.h>
 #include <pthread.h>
-#include <unistd.h>
 #include "../common/zzr_common.h"
 #include "x264/include/x264.h"
 #include "rtmp/include/rtmp.h"
@@ -578,14 +577,22 @@ Java_org_zzrblog_ffmp_RtmpPusher_startPush(JNIEnv *env, jobject jobj, jstring ur
 JNIEXPORT void JNICALL
 Java_org_zzrblog_ffmp_RtmpPusher_stopPush(JNIEnv *env, jobject jobj)
 {
+    if(gRtmpPusher->rtmp_path!=NULL) {
+        free(gRtmpPusher->rtmp_path);
+        gRtmpPusher->rtmp_path == NULL; //防止野指针
+    }
     gRtmpPusher->stop_rtmp_push_thread = 1;
     pthread_join(gRtmpPusher->rtmp_push_thread_id, NULL);
-    free(gRtmpPusher->rtmp_path);
+    // 让startPush重新初始化吧
+    destroy_queue();
+    pthread_mutex_destroy(&(gRtmpPusher->mutex));
+    pthread_cond_destroy(&(gRtmpPusher->cond));
     LOGI("%s","RtmpPusher stopPush !");
 }
 
 JNIEXPORT void JNICALL
 Java_org_zzrblog_ffmp_RtmpPusher_release(JNIEnv *env, jobject jobj)
 {
-
+    x264_encoder_close(gRtmpPusher->x264_encoder);
+    faacEncClose(gRtmpPusher->faac_encoder);
 }
