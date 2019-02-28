@@ -1,7 +1,6 @@
 package org.zzrblog.ffmp;
 
 import android.Manifest;
-import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.pm.PackageManager;
 import android.graphics.PixelFormat;
@@ -17,8 +16,8 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.util.DisplayMetrics;
 import android.view.SurfaceView;
-import android.view.View;
 import android.view.ViewTreeObserver;
+import android.widget.Button;
 import android.widget.Toast;
 
 import org.zzrblog.blogapp.R;
@@ -107,7 +106,9 @@ public class NativeAVEncodeActivity extends Activity implements ViewTreeObserver
 
             @Override
             public void onPreview(byte[] data, Camera camera) {
-
+                if(rtmpPusher!=null){
+                    rtmpPusher.feedVideoData(data);
+                }
             }
 
             @Override
@@ -163,13 +164,15 @@ public class NativeAVEncodeActivity extends Activity implements ViewTreeObserver
             //开始录音
             audioRecord.startRecording();
 
-            while(isAudioRecord){
+            while(isAudioRecord) {
                 //通过AudioRecord不断读取音频数据
                 byte[] buffer = new byte[minBufferSize];
                 //ByteBuffer byteBuffer = ByteBuffer.allocateDirect(minBufferSize);
                 int len = audioRecord.read(buffer, 0, buffer.length);
                 if(len > 0){
-                    //Log.d(TAG, "audioRecord.read "+buffer.length);
+                    if(rtmpPusher!=null){
+                        rtmpPusher.feedAudioData(buffer, buffer.length);
+                    }
                 }
             }
         }
@@ -188,20 +191,33 @@ public class NativeAVEncodeActivity extends Activity implements ViewTreeObserver
             audioRecord.release();
             audioRecord = null;
         }
+
+        if(rtmpPusher!=null) {
+            rtmpPusher.release();
+        }
     }
 
 
     private RtmpPusher rtmpPusher;
+    private boolean isPushing = false;
 
-    public void OnClickRtmpPush(@SuppressLint("USELESS") View view) {
+    public void OnClickRtmpPush(Button view) {
         if(rtmpPusher == null) {
+            Point previewSize = cameraHelper.getPreviewSize();
+            if(previewSize == null) return;
             rtmpPusher = new RtmpPusher();
+            rtmpPusher.prepareVideoEncoder(previewSize.x, previewSize.y, 150*1000, 25);
+            rtmpPusher.prepareAudioEncoder(sampleRateInHz, audioRecordChannelNum);
         }
-        Point previewSize = cameraHelper.getPreviewSize();
-        if(previewSize == null)
-            return;
 
-        rtmpPusher.prepareVideoEncoder(previewSize.x, previewSize.y, 100*1000, 25);
-        rtmpPusher.prepareAudioEncoder(sampleRateInHz, audioRecordChannelNum);
+        if(!isPushing) {
+            rtmpPusher.startPush("rtmp://127.0.0.1/live/zzr");
+            isPushing = true;
+            view.setText("停止推流");
+        } else {
+            rtmpPusher.stopPush();
+            isPushing = false;
+            view.setText("启动推流");
+        }
     }
 }
