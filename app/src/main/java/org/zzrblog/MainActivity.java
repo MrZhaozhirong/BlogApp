@@ -13,7 +13,7 @@ import org.zzrblog.blogapp.hockey.HockeyActivity;
 import org.zzrblog.blogapp.panorama.PanoramaActivity;
 import org.zzrblog.camera.ContinuousRecordActivity;
 import org.zzrblog.ffmp.FFmpDecoderActivity;
-import org.zzrblog.ffmp.FFmpEncoderActivity;
+import org.zzrblog.ffmp.NativeAVEncodeActivity;
 import org.zzrblog.fmod.EffectActivity;
 import org.zzrblog.fmod.FmodActivity;
 
@@ -77,7 +77,7 @@ public class MainActivity extends Activity {
     }
 
     public void clickOnFFmpEncoderTest(@SuppressLint("USELESS") View view) {
-        startActivity(new Intent(MainActivity.this, FFmpEncoderActivity.class));
+        startActivity(new Intent(MainActivity.this, NativeAVEncodeActivity.class));
     }
 
     @Override

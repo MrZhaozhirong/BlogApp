@@ -29,7 +29,7 @@ import org.zzrblog.util.CameraListener;
  * Created by zzr on 2019/2/14.
  */
 
-public class FFmpEncoderActivity extends Activity implements ViewTreeObserver.OnGlobalLayoutListener {
+public class NativeAVEncodeActivity extends Activity implements ViewTreeObserver.OnGlobalLayoutListener {
 
     private static final String[] NEEDED_PERMISSIONS = new String[]{
             Manifest.permission.CAMERA,
