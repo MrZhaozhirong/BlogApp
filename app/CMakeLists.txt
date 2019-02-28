@@ -228,6 +228,7 @@ add_library( # 生成动态库的名称
              # 指定是动态库
              SHARED
              # 编译库的源代码文件
+             src/main/cpp/common/zzr_common.c
              src/main/cpp/rtmppush/queue.c
              src/main/cpp/rtmppush/rtmp_push.c )
 
