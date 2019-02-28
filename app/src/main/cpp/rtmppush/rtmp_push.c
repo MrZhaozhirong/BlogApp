@@ -1,6 +1,7 @@
 #include <jni.h>
 #include <malloc.h>
 #include <pthread.h>
+#include <unistd.h>
 #include "../common/zzr_common.h"
 #include "x264/include/x264.h"
 #include "rtmp/include/rtmp.h"
@@ -24,9 +25,9 @@ typedef struct _rtmp_push {
     char *rtmp_path;
 
     // x264视频编码
-    x264_picture_t* pic_in;
+    x264_picture_t pic_in;
     x264_t *x264_encoder;
-    x264_picture_t* pic_out;
+    x264_picture_t pic_out;
 
     // faac音频编码
     faacEncHandle faac_encoder;
@@ -70,6 +71,7 @@ void* rtmp_push_thread(void * arg) {
     if(!RTMP_ConnectStream(rtmp,0)) { //连接流
         goto end;
     }
+
     while(gRtmpPusher->stop_rtmp_push_thread == 0)
     {
         pthread_mutex_lock(&(gRtmpPusher->mutex));
@@ -118,6 +120,82 @@ void add_rtmp_packet(RTMPPacket *packet) {
 }
 
 
+/**
+ * 添加AAC编码的sequence header
+ */
+void add_aac_sequence_header()
+{
+    if(gRtmpPusher==NULL || gRtmpPusher->faac_encoder==NULL)
+        return;
+    //从faacEncoder获取aac头信息
+    unsigned char *spec_buf;
+    unsigned long len; //长度
+    faacEncGetDecoderSpecificInfo(gRtmpPusher->faac_encoder, &spec_buf, &len);
+    uint32_t body_size = 2 + len;
+    RTMPPacket *packet = malloc(sizeof(RTMPPacket));
+    //RTMPPacket初始化
+    RTMPPacket_Alloc(packet,body_size);
+    RTMPPacket_Reset(packet);
+    char * body = packet->m_body;
+    //AUDIODATA的标志位，各位标志如下
+    body[0] = 0xAF;
+    // SoundFormat(4bits):10=AAC；
+    // SoundRate(2bits):3=44kHz；
+    // SoundSize(1bit):1=16-bit samples；
+    // SoundType(1bit):1=Stereo sound；
+
+    //AACAUDIODATA的AACPacketType
+    body[1] = 0x00;
+    // 1表示AAC raw，
+    // 0表示AAC sequence header
+    //AACAUDIODATA的RawData
+    memcpy(&body[2], spec_buf, len); /*spec_buf是AAC sequence header数据*/
+
+    packet->m_packetType = RTMP_PACKET_TYPE_AUDIO;
+    packet->m_nBodySize = body_size;
+    packet->m_nChannel = 0x04;
+    packet->m_hasAbsTimestamp = 0;
+    packet->m_nTimeStamp = 0;
+    packet->m_headerType = RTMP_PACKET_SIZE_MEDIUM;
+    add_rtmp_packet(packet);
+    free(spec_buf);
+}
+
+/**
+ * 添加AAC头->RTMPPacket队列
+ */
+void add_aac_body(unsigned char *buf, int len)
+{
+    if(gRtmpPusher==NULL)
+        return;
+    int body_size = 2 + len;
+    RTMPPacket *packet = malloc(sizeof(RTMPPacket));
+    //RTMPPacket初始化
+    RTMPPacket_Alloc(packet,body_size);
+    RTMPPacket_Reset(packet);
+    char * body = packet->m_body;
+    //AUDIODATA的标志位，各位标志如下
+    body[0] = 0xAF;
+    // SoundFormat(4bits):10=AAC；
+    // SoundRate(2bits):3=44kHz；
+    // SoundSize(1bit):1=16-bit samples；
+    // SoundType(1bit):1=Stereo sound；
+
+    //AACAUDIODATA的AACPacketType
+    body[1] = 0x01;
+    // 1表示AAC raw，
+    // 0表示AAC sequence header
+    //AACAUDIODATA的RawData
+    memcpy(&body[2], buf, (size_t) len); /*spec_buf是AAC raw数据*/
+
+    packet->m_packetType = RTMP_PACKET_TYPE_AUDIO;
+    packet->m_nBodySize = (uint32_t) body_size;
+    packet->m_nChannel = 0x04;
+    packet->m_hasAbsTimestamp = 0;
+    packet->m_headerType = RTMP_PACKET_SIZE_LARGE;
+    packet->m_nTimeStamp = RTMP_GetTime() - gRtmpPusher->start_time;
+    add_rtmp_packet(packet);
+}
 
 /**
  * 打包h264的SPS与PPS->NALU->RTMPPacket队列
@@ -257,9 +335,9 @@ JNIEXPORT void JNICALL Java_org_zzrblog_ffmp_RtmpPusher_feedVideoData
 
     //NV21->YUV420P
     jbyte* nv21_buffer = (*env)->GetByteArrayElements(env,array,NULL);
-    uint8_t* y = gRtmpPusher->pic_in->img.plane[0];
-    uint8_t* u = gRtmpPusher->pic_in->img.plane[1];
-    uint8_t* v = gRtmpPusher->pic_in->img.plane[2];
+    uint8_t* y = gRtmpPusher->pic_in.img.plane[0];
+    uint8_t* u = gRtmpPusher->pic_in.img.plane[1];
+    uint8_t* v = gRtmpPusher->pic_in.img.plane[2];
     memcpy(y, nv21_buffer, (size_t) y_len);
     for (int i = 0; i < u_len; i++) {
         //NV21 先v后u
@@ -271,13 +349,13 @@ JNIEXPORT void JNICALL Java_org_zzrblog_ffmp_RtmpPusher_feedVideoData
     int n_nal = -1; //NALU的个数
     //进行h264编码
     if(x264_encoder_encode(gRtmpPusher->x264_encoder,&nal, &n_nal,
-                           gRtmpPusher->pic_in, gRtmpPusher->pic_out) < 0){
+                           &(gRtmpPusher->pic_in), &(gRtmpPusher->pic_out)) < 0){
         LOGE("%s","编码失败");
         return;
     } else {
         // 初始化编码器的时候，pic_in->i_pts = 0
         // 每编码一帧 i_pts累加1
-        gRtmpPusher->pic_in->i_pts += 1;
+        gRtmpPusher->pic_in.i_pts += 1;
     }
     //使用rtmp协议将h264编码的视频数据发送给流媒体服务器
     //帧分为关键帧和普通帧，为了提高画面的纠错率，关键帧应都包含SPS和PPS数据
@@ -359,10 +437,9 @@ Java_org_zzrblog_ffmp_RtmpPusher_prepareVideoEncoder(JNIEnv *env, jobject jobj,
     x264_param_apply_profile(&param, "baseline");
 
     //x264_picture_t（输入图像）初始化
-    x264_picture_alloc(gRtmpPusher->pic_in, param.i_csp, param.i_width, param.i_height);
-    if(gRtmpPusher->pic_in != NULL) {
-        gRtmpPusher->pic_in->i_pts = 0;
-    }
+    x264_picture_alloc(&(gRtmpPusher->pic_in), param.i_csp, param.i_width, param.i_height);
+
+    gRtmpPusher->pic_in.i_pts = 0;
     //打开编码器
     gRtmpPusher->x264_encoder = x264_encoder_open(&param);
     if(gRtmpPusher->x264_encoder){
@@ -411,7 +488,8 @@ JNIEXPORT void JNICALL Java_org_zzrblog_ffmp_RtmpPusher_feedAudioData
         if (byteslen < 1) {
             continue;
         }
-        add_aac_body(aac_output, byteslen);//从aac_output中得到编码后的aac数据流，放到数据队列
+        // 从aac_output中得到编码后的aac数据流，放到数据队列
+        add_aac_body(aac_output, byteslen);
     }
     //处理完当前批pcm数据了，释放资源
     (*env)->ReleaseByteArrayElements(env, j_pcm_array, pPcmArray, NULL);
@@ -452,10 +530,10 @@ Java_org_zzrblog_ffmp_RtmpPusher_prepareAudioEncoder(JNIEnv *env, jobject jobj,
     pFaacConfigure->useLfe = 0; //是否允许一个声道为低频通道
     pFaacConfigure->bitRate = 48000;  //设置比特率
 	pFaacConfigure->inputFormat = FAAC_INPUT_16BIT; //设置输入PCM格式
-    pFaacConfigure->quantqual = 100;
+    pFaacConfigure->quantqual = 100;//数字信号的质量
     pFaacConfigure->bandWidth = 0; //频宽
     pFaacConfigure->shortctl = SHORTCTL_NORMAL;
-    if(!faacEncSetConfiguration(gRtmpPusher->faac_encoder, pFaacConfigure)){
+    if(!faacEncSetConfiguration(gRtmpPusher->faac_encoder, pFaacConfigure)) {
         LOGE("%s","音频编码器配置失败..");
         return;
     }
@@ -490,6 +568,8 @@ Java_org_zzrblog_ffmp_RtmpPusher_startPush(JNIEnv *env, jobject jobj, jstring ur
     //启动消费者线程（从队列中不断拉取RTMPPacket发送给流媒体服务器）
     pthread_create(&(gRtmpPusher->rtmp_push_thread_id), NULL, rtmp_push_thread, NULL);
     gRtmpPusher->stop_rtmp_push_thread = 0;
+    //RTMPPacket队列已经创建，发送AAC序列信息头
+    add_aac_sequence_header();
 
     (*env)->ReleaseStringUTFChars(env,url_jstr,url_cstr);
     LOGI("%s","RtmpPusher startPush !");
