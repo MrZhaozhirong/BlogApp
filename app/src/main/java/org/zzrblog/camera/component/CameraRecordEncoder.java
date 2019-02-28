@@ -214,7 +214,7 @@ public class CameraRecordEncoder implements Runnable {
     // ---------------以下部分代码 仅由编码器线程访问 ---------------------------------------------------------------------
     private int mFrameTextureId;
     private int mSignTexId;
-    private CameraRecordEncoderCore mRecordEncoder;
+    private CameraRecordEncoderCore2 mRecordEncoder;
     private EglCore mEglCore;
     private WindowSurface mRecorderInputSurface;
     private FrameRect mFrameRect;
@@ -226,7 +226,7 @@ public class CameraRecordEncoder implements Runnable {
     private void handleStartRecording(EncoderConfig config) {
         Log.d(TAG, "handleStartRecording " + config);
         try {
-            mRecordEncoder = new CameraRecordEncoderCore(config.mWidth, config.mHeight,
+            mRecordEncoder = new CameraRecordEncoderCore2(config.mWidth, config.mHeight,
                     config.mBitRate, config.mOutputFile);
             mConfig = config;
             mSignTexId = TextureHelper.loadTexture(config.mContext, R.mipmap.name);
@@ -251,6 +251,7 @@ public class CameraRecordEncoder implements Runnable {
     private void handleStopRecording() {
         Log.d(TAG, "handleStopRecording");
         mRecordEncoder.drainEncoder(true);
+        mRecordEncoder.drainAudioEncoder(true);
         releaseEncoder();
     }
 
@@ -274,6 +275,7 @@ public class CameraRecordEncoder implements Runnable {
     private void handleFrameAvailable(float[] transform, long timestampNanos) {
         //先推动一次编码器工作，把编码后的数据写入Muxer
         mRecordEncoder.drainEncoder(false);
+        mRecordEncoder.drainAudioEncoder(false);
 
         mRecorderInputSurface.makeCurrent();
         GLES20.glClear( GLES20.GL_DEPTH_BUFFER_BIT | GLES20.GL_COLOR_BUFFER_BIT);
