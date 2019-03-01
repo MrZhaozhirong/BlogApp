@@ -323,10 +323,10 @@ JNIEXPORT void JNICALL Java_org_zzrblog_ffmp_RtmpPusher_feedVideoData
 {
     if(gRtmpPusher == NULL )
         return;
-    int array_len = (*env)->GetArrayLength(env, array);
-    int option_len = gRtmpPusher->width * gRtmpPusher->height * 3/2;
-    if(array_len < option_len)
-        return;
+    //int array_len = (*env)->GetArrayLength(env, array);
+    //int option_len = gRtmpPusher->width * gRtmpPusher->height * 3/2;
+    //if(array_len < option_len)
+    //    return;
 
     int y_len = gRtmpPusher->width * gRtmpPusher->height;
     int u_len = y_len / 4;
@@ -595,4 +595,5 @@ Java_org_zzrblog_ffmp_RtmpPusher_release(JNIEnv *env, jobject jobj)
 {
     x264_encoder_close(gRtmpPusher->x264_encoder);
     faacEncClose(gRtmpPusher->faac_encoder);
+    free(gRtmpPusher);
 }
