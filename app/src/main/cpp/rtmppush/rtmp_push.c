@@ -374,6 +374,7 @@ JNIEXPORT void JNICALL Java_org_zzrblog_ffmp_RtmpPusher_feedVideoData
                 //发送序列信息
                 //h264关键帧会包含SPS和PPS数据
                 add_param_sequence(pps,sps,pps_len,sps_len);
+                sps_len=0;pps_len=0;
             }
         }else if(nal[i].i_type == NAL_PPS){
             //复制PPS数据
@@ -383,9 +384,10 @@ JNIEXPORT void JNICALL Java_org_zzrblog_ffmp_RtmpPusher_feedVideoData
                 //发送序列信息
                 //h264关键帧会包含SPS和PPS数据
                 add_param_sequence(pps,sps,pps_len,sps_len);
+                sps_len=0;pps_len=0;
             }
         }else{
-            //发送普通帧信息
+            //发送帧数据
             add_common_frame(nal[i].p_payload, nal[i].i_payload);
         }
     }
