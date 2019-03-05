@@ -9,6 +9,7 @@ import android.hardware.Camera;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
+import android.media.audiofx.AcousticEchoCanceler;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -138,6 +139,9 @@ public class NativeAVEncodeActivity extends Activity implements ViewTreeObserver
         cameraHelper.init();
     }
 
+
+
+    private AcousticEchoCanceler canceler;
     private int audioRecordChannelNum = 1;
     private int sampleRateInHz = 44100;
     private int minBufferSize;
@@ -152,18 +156,19 @@ public class NativeAVEncodeActivity extends Activity implements ViewTreeObserver
         audioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC,
                 sampleRateInHz, channelConfig,
                 AudioFormat.ENCODING_PCM_16BIT, minBufferSize);
+        if (AcousticEchoCanceler.isAvailable()) {
+            initAEC(audioRecord.getAudioSessionId());
+        }
         //启动录音子线程
         isAudioRecord = true;
         new Thread(new AudioRecordTask()).start();
     }
 
     private class AudioRecordTask implements Runnable{
-
         @Override
         public void run() {
-            //开始录音
             audioRecord.startRecording();
-
+            //开始录音
             while(isAudioRecord) {
                 //通过AudioRecord不断读取音频数据
                 byte[] buffer = new byte[minBufferSize];
@@ -176,8 +181,20 @@ public class NativeAVEncodeActivity extends Activity implements ViewTreeObserver
                 }
             }
         }
-
     }
+    // android.os.Build.VERSION.SDK_INT >= 16;
+    public boolean initAEC(int audioSession) {
+        if (canceler != null) {
+            return false;
+        }
+        canceler = AcousticEchoCanceler.create(audioSession);
+        if (canceler != null) {
+            canceler.setEnabled(true);
+            return canceler.getEnabled();
+        }
+        return false;
+    }
+
 
     @Override
     protected void onStop() {
