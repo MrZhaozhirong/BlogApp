@@ -478,8 +478,10 @@ JNIEXPORT void JNICALL Java_org_zzrblog_ffmp_RtmpPusher_feedAudioData
         }
         for (int i = 0; i < audioLength; i++) {
             //每次从传入的pcm音频队列中读出量化位数为8的pcm数据。
-            int16_t s = (pcm_short_buf + nByteCount)[i];
-            pcm_input[i] = s << 8;//用8个二进制位来表示一个采样量化点（模数转换）
+            //int16_t s = (pcm_short_buf + nByteCount)[i];
+            //pcm_input[i] = s << 8; //用8个二进制位来表示一个采样量化点（模数转换）
+            // 每次从传入的pcm音频队列中读出量化位数为16位的pcm数据。
+            pcm_input[i] = (pcm_short_buf + nByteCount)[i];
         }
         nByteCount += gRtmpPusher->nInputSamples;
         //利用FAAC进行编码
