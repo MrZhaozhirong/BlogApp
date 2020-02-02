@@ -6,6 +6,7 @@ import android.media.MediaCodecList;
 import android.media.MediaFormat;
 import android.media.MediaMuxer;
 import android.os.Build;
+import android.os.Bundle;
 import android.util.Log;
 import android.view.Surface;
 
@@ -168,6 +169,14 @@ public class CameraRecordEncoderCore {
         }
     }
 
+    /**
+     * produce a sync frame "soon".
+     */
+    public void requstSyncFrame() {
+        Bundle params = new Bundle();
+        params.putInt(MediaCodec.PARAMETER_KEY_REQUEST_SYNC_FRAME, 0);
+        mVideoEncoder.setParameters(params);
+    }
     /**
      * Releases encoder resources.
      */
