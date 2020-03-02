@@ -24,7 +24,6 @@ import java.nio.ByteBuffer;
 public class CameraRecordEncoderCore2 {
     private static final String TAG = "RecordEncoderCore2";
     private static final boolean DEBUG = true;
-
     private static final String VIDEO_MIME_TYPE = "video/avc";    // H.264 Advanced Video Coding
     private static final int FRAME_RATE = 30;               // 30fps
     private static final int IFRAME_INTERVAL = 5;           // 5 seconds between I-frames
