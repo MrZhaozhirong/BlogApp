@@ -14,8 +14,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import static android.R.attr.format;
-
 /**
  * Created by zzr on 2017/12/18.
  * 在 CameraRecordEncoderCore的基础上增加音频混合
@@ -67,7 +65,7 @@ public class CameraRecordEncoderCore2 {
         videoFormat.setInteger(MediaFormat.KEY_BIT_RATE, bitRate);
         videoFormat.setInteger(MediaFormat.KEY_FRAME_RATE, FRAME_RATE);
         videoFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, IFRAME_INTERVAL);
-        if (DEBUG) Log.d(TAG, "format: " + format);
+        if (DEBUG) Log.d(TAG, "format: " + videoFormat);
         // Create a MediaCodec encoder, and configure it with our format.
         // Get a Surface we can use for input and wrap it with a class that handles the EGL work.
         mVideoEncoder = MediaCodec.createEncoderByType(VIDEO_MIME_TYPE);
