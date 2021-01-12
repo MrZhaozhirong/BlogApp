@@ -12,6 +12,7 @@ import org.zzrblog.blogapp.cube.CubeActivity;
 import org.zzrblog.blogapp.hockey.HockeyActivity;
 import org.zzrblog.blogapp.panorama.PanoramaActivity;
 import org.zzrblog.camera.ContinuousRecordActivity;
+import org.zzrblog.camera2.Camera2BasicActivity;
 import org.zzrblog.ffmp.FFmpDecoderActivity;
 import org.zzrblog.ffmp.NativeAVEncodeActivity;
 import org.zzrblog.fmod.EffectActivity;
@@ -78,6 +79,10 @@ public class MainActivity extends Activity {
 
     public void clickOnFFmpEncoderTest(@SuppressLint("USELESS") View view) {
         startActivity(new Intent(MainActivity.this, NativeAVEncodeActivity.class));
+    }
+
+    public void clickOnCamera2Basic(@SuppressLint("USELESS") View view) {
+        startActivity(new Intent(MainActivity.this, Camera2BasicActivity.class));
     }
 
     @Override
