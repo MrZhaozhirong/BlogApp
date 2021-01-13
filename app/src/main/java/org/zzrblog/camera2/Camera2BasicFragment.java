@@ -124,7 +124,8 @@ public class Camera2BasicFragment extends BaseFragment implements View.OnClickLi
     private CaptureRequest mPreviewRequest;
     // {@link CameraCaptureSession } for camera preview.
     private CameraCaptureSession mCaptureSession;
-
+    // @test  预览帧数据的回调承载接口。
+    private ImageReader mPreviewImgReader;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -359,10 +360,9 @@ public class Camera2BasicFragment extends BaseFragment implements View.OnClickLi
         }
     }
 
-    /**
-     * This a callback object for the {@link ImageReader}. "onImageAvailable" will be called when a
-     * still image is ready to be saved.
-     */
+
+    // This a callback object for the {@link ImageReader}. "onImageAvailable" will be called when a
+    // still image is ready to be saved.
     private final ImageReader.OnImageAvailableListener mOnImageAvailableListener
             = new ImageReader.OnImageAvailableListener() {
         @Override
@@ -481,8 +481,14 @@ public class Camera2BasicFragment extends BaseFragment implements View.OnClickLi
             // We set up a CaptureRequest.Builder with the output Surface.
             mPreviewRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             mPreviewRequestBuilder.addTarget(surface);
+            // @test 设置预览帧的回传数据承载目标
+            mPreviewImgReader = ImageReader.newInstance(mPreviewSize.getWidth(), mPreviewSize.getHeight(),
+                    ImageFormat.YUV_420_888, /*maxImages*/2);
+            mPreviewImgReader.setOnImageAvailableListener(
+                    mOnPreviewAvailableListener, mBackgroundHandler);
+            mPreviewRequestBuilder.addTarget(mPreviewImgReader.getSurface());
             // Here, we create a CameraCaptureSession for camera preview.
-            mCameraDevice.createCaptureSession(Arrays.asList(surface, mImageReader.getSurface()),
+            mCameraDevice.createCaptureSession(Arrays.asList(surface, mImageReader.getSurface(), mPreviewImgReader.getSurface()),
                     new CameraCaptureSession.StateCallback() {
                         @Override
                         public void onConfigured(@NonNull CameraCaptureSession session) {
@@ -493,6 +499,9 @@ public class Camera2BasicFragment extends BaseFragment implements View.OnClickLi
                             // When the session is ready, we start displaying the preview.
                             mCaptureSession = session;
                             try {
+                                // Overall mode of 3A (auto-exposure, auto-white-balance, auto-focus) control
+                                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_MODE,
+                                        CameraMetadata.CONTROL_MODE_AUTO);
                                 // Auto focus should be continuous for camera preview.
                                 mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
                                         CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
@@ -523,6 +532,18 @@ public class Camera2BasicFragment extends BaseFragment implements View.OnClickLi
                     CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
         }
     }
+
+    // This a callback object for the {@link ImageReader}. "onImageAvailable" will be called when a
+    // still image is ready to be saved.
+    private final ImageReader.OnImageAvailableListener
+            mOnPreviewAvailableListener = new ImageReader.OnImageAvailableListener() {
+        @Override
+        public void onImageAvailable(ImageReader reader) {
+            Image image= reader.acquireNextImage();
+
+            image.close();
+        }
+    };
 
     /**
      * A {@link CameraCaptureSession.CaptureCallback} that handles events related to JPEG capture.
