@@ -537,11 +537,34 @@ public class Camera2BasicFragment extends BaseFragment implements View.OnClickLi
     // still image is ready to be saved.
     private final ImageReader.OnImageAvailableListener
             mOnPreviewAvailableListener = new ImageReader.OnImageAvailableListener() {
+        // 重复使用同一批byte数组，减少gc频率
+        private byte[] y;
+        private byte[] u;
+        private byte[] v;
         @Override
         public void onImageAvailable(ImageReader reader) {
             Image image= reader.acquireNextImage();
-
-            image.close();
+            try{
+                Image.Plane[] planes = image.getPlanes();
+                if (planes.length < 3) return;
+                if (y == null) {
+                    y = new byte[planes[0].getBuffer().limit() - planes[0].getBuffer().position()];
+                    u = new byte[planes[1].getBuffer().limit() - planes[1].getBuffer().position()];
+                    v = new byte[planes[2].getBuffer().limit() - planes[2].getBuffer().position()];
+                }
+                if (image.getPlanes()[0].getBuffer().remaining() == y.length) {
+                    planes[0].getBuffer().get(y);
+                    planes[1].getBuffer().get(u);
+                    planes[2].getBuffer().get(v);
+                }
+                //if(camera2Listener!=null){
+                //    camera2Listener.onPreview(y, u, v, mPreviewSize, planes[0].getRowStride());
+                //}
+            }catch (Exception e){
+                e.printStackTrace();
+            }finally {
+                image.close();
+            }
         }
     };
 
