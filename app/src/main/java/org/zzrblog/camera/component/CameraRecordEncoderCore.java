@@ -60,6 +60,14 @@ public class CameraRecordEncoderCore {
         //      Some color formats are vendor specific. Others are defined in MediaCodecInfo.CodecCapabilities.
         //      For color formats that are equivalent to a flexible format, you can still use getInput/OutputImage(int).
 
+        //2020.12 新增编码出b帧的设置
+        //https://blog.csdn.net/matrix_laboratory/article/details/82726897
+        format.setInteger(MediaFormat.KEY_PROFILE, MediaCodecInfo.CodecProfileLevel.AVCProfileMain);
+        format.setInteger(MediaFormat.KEY_LEVEL, MediaCodecInfo.CodecProfileLevel.AVCLevel3);
+        if (Build.VERSION.SDK_INT >= 29) {
+            format.setInteger(MediaFormat.KEY_MAX_B_FRAMES, 1);
+        }
+
         // 2. 创建我们的编码器，配置我们以上的设置
         mVideoEncoder = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC);
         mVideoEncoder.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
